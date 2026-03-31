@@ -1,0 +1,237 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+  OccuPlug Research Prototype Design System
+  Academic-focused, industrial control panel aesthetic
+  For: Occupancy-Driven Plug for Adaptive Lighting and Appliance Control
+*/
+
+@layer base {
+  :root {
+    /* Background - Clean white/light gray for academic clarity */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+
+    /* Card surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Primary - Deep professional blue */
+    --primary: 215 80% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft blue-gray */
+    --secondary: 210 25% 93%;
+    --secondary-foreground: 215 25% 25%;
+
+    /* Muted surfaces */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 15% 45%;
+
+    /* Accent - Technical blue */
+    --accent: 210 60% 95%;
+    --accent-foreground: 215 80% 40%;
+
+    /* Status Colors */
+    --success: 152 60% 42%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Energy indicator - Green for efficiency */
+    --energy: 152 60% 42%;
+    --energy-foreground: 0 0% 100%;
+    --energy-muted: 152 40% 94%;
+
+    /* Occupancy indicator */
+    --occupied: 215 80% 55%;
+    --occupied-foreground: 0 0% 100%;
+    --vacant: 210 15% 75%;
+    --vacant-foreground: 215 25% 35%;
+
+    /* Power states */
+    --power-on: 152 60% 42%;
+    --power-off: 210 15% 65%;
+
+    /* Sensor readings */
+    --sensor-light: 45 95% 55%;
+    --sensor-motion: 215 80% 55%;
+    --sensor-power: 280 60% 55%;
+
+    /* Border and input */
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 215 80% 45%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 215 25% 18%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 215 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 25%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 215 25% 25%;
+    --sidebar-ring: 215 80% 55%;
+
+    /* Chart colors for power monitoring */
+    --chart-1: 215 80% 50%;
+    --chart-2: 152 60% 45%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 215 30% 10%;
+    --foreground: 210 20% 95%;
+
+    --card: 215 28% 14%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 215 28% 14%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 215 80% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 215 25% 18%;
+    --muted-foreground: 210 15% 60%;
+
+    --accent: 215 40% 22%;
+    --accent-foreground: 215 80% 70%;
+
+    --success: 152 55% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 90% 55%;
+    --warning-foreground: 0 0% 10%;
+    
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --energy: 152 55% 45%;
+    --energy-foreground: 0 0% 100%;
+    --energy-muted: 152 30% 18%;
+
+    --occupied: 215 80% 60%;
+    --occupied-foreground: 0 0% 100%;
+    --vacant: 210 15% 40%;
+    --vacant-foreground: 210 15% 70%;
+
+    --power-on: 152 55% 45%;
+    --power-off: 210 15% 40%;
+
+    --sensor-light: 45 90% 60%;
+    --sensor-motion: 215 80% 60%;
+    --sensor-power: 280 55% 60%;
+
+    --border: 215 25% 22%;
+    --input: 215 25% 22%;
+    --ring: 215 80% 55%;
+
+    --sidebar-background: 215 30% 8%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 215 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 28% 14%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 215 25% 18%;
+    --sidebar-ring: 215 80% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Monospace for sensor readings and data */
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Status indicator pulse animation */
+  .status-pulse {
+    @apply relative;
+  }
+  
+  .status-pulse::after {
+    content: '';
+    @apply absolute inset-0 rounded-full animate-ping opacity-40;
+    background: inherit;
+  }
+
+  /* Sensor reading card */
+  .sensor-card {
+    @apply bg-card rounded-lg border p-4 transition-shadow hover:shadow-md;
+  }
+
+  /* Power indicator */
+  .power-indicator {
+    @apply w-3 h-3 rounded-full transition-colors duration-300;
+  }
+
+  .power-indicator.on {
+    @apply bg-power-on shadow-[0_0_8px_hsl(var(--power-on))];
+  }
+
+  .power-indicator.off {
+    @apply bg-power-off;
+  }
+
+  /* Device card styles */
+  .device-card {
+    @apply bg-card rounded-xl border p-5 transition-all duration-200 hover:shadow-lg hover:border-primary/30;
+  }
+
+  /* Data label for thesis-friendly display */
+  .data-label {
+    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+  }
+
+  .data-value {
+    @apply text-2xl font-semibold font-mono tabular-nums;
+  }
+
+  /* Automation active indicator */
+  .automation-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .automation-badge.active {
+    @apply bg-energy-muted text-energy;
+  }
+
+  .automation-badge.inactive {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  /* Logo adapts to dark mode — brightens dark navy elements */
+  .dark .app-logo {
+    filter: brightness(1.4) saturate(1.1);
+  }
+}
