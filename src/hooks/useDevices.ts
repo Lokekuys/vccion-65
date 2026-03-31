@@ -90,7 +90,9 @@ export function useDevices() {
             name: safeName,
             isOn: d.relayState ?? d.isOn ?? false,
             isOnline: true,
-            controlMode: d.controlMode ?? 'manual',
+            controlMode:
+            d.controlMode ??
+            (d.mode === 0 ? 'off' : d.mode === 1 ? 'manual' : d.mode === 2 ? 'smart' : d.mode === 3 ? 'scheduled' : 'manual'),
 
             sensorData: {
               occupancy: sharedSensorRef.current?.occupancy ?? d.sensorData?.occupancy ?? "vacant",
@@ -271,7 +273,7 @@ export function useDevices() {
         update(ref(rtdb, `devices/${id}`), {
           isOn: true,
           relayState: true,
-          lastSeen: new Date().toISOString(),
+          lastSeen: Date.now(),
           turnedOnAt: new Date().toISOString(),
         });
       }
@@ -281,7 +283,7 @@ export function useDevices() {
           update(ref(rtdb, `devices/${id}`), {
             isOn: false,
             relayState: false,
-            lastSeen: new Date().toISOString(),
+            lastSeen: Date.now(),
             turnedOnAt: null,
           });
         } else if (!vacancyTimers.current[id]) {
@@ -294,7 +296,7 @@ export function useDevices() {
             update(ref(rtdb, `devices/${id}`), {
               isOn: false,
               relayState: false,
-              lastSeen: new Date().toISOString(),
+              lastSeen: Date.now(),
               turnedOnAt: null,
             });
             delete vacancyTimers.current[id];
@@ -322,6 +324,7 @@ export function useDevices() {
       Object.values(vacancyTimers.current).forEach(clearTimeout);
     };
   }, []);
+  
 
   /* ---------- SCHEDULE-BASED AUTO ON/OFF ---------- */
   const DAY_MAP: Record<number, string> = {
@@ -362,14 +365,14 @@ export function useDevices() {
           update(ref(rtdb, `devices/${device.id}`), {
             isOn: true,
             relayState: true,
-            lastSeen: new Date().toISOString(),
-            turnedOnAt: new Date().toISOString(),
+            lastSeen: Date.now(),
+            turnedOnAt: Date.now(),
           });
         } else if (!inWindow && device.isOn) {
           update(ref(rtdb, `devices/${device.id}`), {
             isOn: false,
             relayState: false,
-            lastSeen: new Date().toISOString(),
+            lastSeen: Date.now(),
             turnedOnAt: null,
           });
         }
@@ -380,6 +383,7 @@ export function useDevices() {
     const interval = setInterval(checkSchedules, 30_000);
     return () => clearInterval(interval);
   }, [devices]);
+  
 
   /* ---------- WRITE TO FIREBASE ---------- */
 
@@ -392,13 +396,14 @@ export function useDevices() {
       const updates: Record<string, any> = {
         isOn: newIsOn,
         relayState: newIsOn,
-        lastSeen: new Date().toISOString(),
-        turnedOnAt: newIsOn ? new Date().toISOString() : null,
+        lastSeen: Date.now(),
+        turnedOnAt: newIsOn ? Date.now() : null,
       };
 
-      if (device.controlMode === 'scheduled' || device.controlMode === 'smart') {
-        updates.controlMode = 'manual';
-      }
+     if (device.controlMode === 'scheduled' || device.controlMode === 'smart') {
+     updates.controlMode = 'manual';
+     updates.mode = 1;
+}
       if (device.controlMode === 'smart' && vacancyTimers.current[deviceId]) {
         clearTimeout(vacancyTimers.current[deviceId]);
         delete vacancyTimers.current[deviceId];
@@ -418,7 +423,7 @@ export function useDevices() {
     (deviceId: string, brightness: number) => {
       update(ref(rtdb, `devices/${deviceId}`), {
         brightness,
-        lastSeen: new Date().toISOString(),
+        lastSeen: Date.now(),
       });
     },
     []
@@ -452,11 +457,23 @@ export function useDevices() {
   }, []);
 
   const updateSchedule = useCallback(
-    (deviceId: string, schedule: ScheduleEntry) => {
-      update(ref(rtdb, `devices/${deviceId}/override`), { schedule });
-    },
-    []
-  );
+  (deviceId: string, schedule: ScheduleEntry) => {
+    const startParts = schedule.startTime?.split(':').map(Number) ?? [8, 0];
+    const endParts = schedule.endTime?.split(':').map(Number) ?? [18, 0];
+
+    update(ref(rtdb, `devices/${deviceId}`), {
+      'override/schedule': schedule,
+      'schedule': {
+        enabled: true,
+        startHour: startParts[0] ?? 8,
+        startMinute: startParts[1] ?? 0,
+        endHour: endParts[0] ?? 18,
+        endMinute: endParts[1] ?? 0,
+      },
+    });
+  },
+  []
+);
 
   const updateVecoRate = useCallback((rate: number) => {
     set(ref(rtdb, "settings/vecoRate"), rate);
@@ -468,27 +485,43 @@ export function useDevices() {
   }, []);
 
   const setControlMode = useCallback((deviceId: string, mode: ControlMode) => {
-    const updates: Record<string, any> = {
-      controlMode: mode,
-      lastSeen: new Date().toISOString(),
-    };
+  const modeMap: Record<ControlMode, number> = {
+    manual: 1,
+    smart: 2,
+    scheduled: 3,
+  };
 
-    if (mode === 'scheduled') {
-      const device = devices?.find((d) => d.id === deviceId);
-      const existing = device?.override?.schedule;
-      if (!existing?.days?.length || !existing?.startTime || !existing?.endTime) {
-        updates['override/schedule'] = {
-          enabled: true,
-          days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-          startTime: '08:00',
-          endTime: '18:00',
-        };
-      }
+  const updates: Record<string, any> = {
+    controlMode: mode,
+    mode: modeMap[mode],
+    lastSeen: Date.now(),
+  };
+
+  if (mode === 'scheduled') {
+    const device = devices?.find((d) => d.id === deviceId);
+    const existing = device?.override?.schedule;
+
+    if (!existing?.days?.length || !existing?.startTime || !existing?.endTime) {
+      updates['override/schedule'] = {
+        enabled: true,
+        days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        startTime: '08:00',
+        endTime: '18:00',
+      };
     }
 
-    update(ref(rtdb, `devices/${deviceId}`), updates);
-  }, [devices]);
+    // Also create ESP-friendly schedule fields
+    updates['schedule'] = {
+      enabled: true,
+      startHour: 8,
+      startMinute: 0,
+      endHour: 18,
+      endMinute: 0,
+    };
+  }
 
+  update(ref(rtdb, `devices/${deviceId}`), updates);
+}, [devices]);
   const refreshDevices = useCallback(() => {
     window.location.reload();
   }, []);

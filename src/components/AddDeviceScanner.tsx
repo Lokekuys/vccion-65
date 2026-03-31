@@ -94,13 +94,15 @@ export function AddDeviceScanner() {
         // NOTE: We intentionally do NOT exclude isRegistered === true.
         // The ESP firmware sets isRegistered: true during initial boot/registration,
         // so requiring isRegistered !== true would hide valid unclaimed plugs.
+        const normalizedType = String(d.type ?? d.deviceKind ?? '').toLowerCase();
+
         if (
-          d.type !== 'smartPlug' ||
-          d.isClaimed === true ||
-          d.isRemoved === true
-        ) {
+            (normalizedType && normalizedType !== 'smartplug' && normalizedType !== 'relayplug') ||
+            d.isClaimed === true ||
+            d.isRemoved === true
+          ) {
           continue;
-        }
+          }
 
         // Normalize lastSeen to a number (handles both string and number from Firebase)
         const ls = Number(d.lastSeen || 0);
