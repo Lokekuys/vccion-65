@@ -179,7 +179,7 @@ export function AddDeviceScanner() {
   };
 
   const handleClaim = async () => {
-    if (!selectedDevice || !deviceName.trim() || !location.trim() || !category || !selectedPreset || ratedWatts <= 0) return;
+    if (!selectedDevice || !deviceName.trim() || !category || !selectedPreset || ratedWatts <= 0) return;
 
     setClaiming(true);
     const applianceType = inferApplianceType(category, selectedPreset);
@@ -190,7 +190,7 @@ export function AddDeviceScanner() {
         isClaimed: true,
         isRegistered: true,
         name: deviceName.trim(),
-        location: location.trim(),
+        location: location.trim() || '',
         category,
         deviceType: selectedPreset,
         ratedWatts,
@@ -205,7 +205,7 @@ export function AddDeviceScanner() {
       });
       toast({
         title: 'Device Added',
-        description: `${deviceName.trim()} (${selectedPreset}) has been added.`,
+        description: 'Your device has been successfully added.',
       });
       handleReset();
       setOpen(false);
@@ -238,7 +238,7 @@ export function AddDeviceScanner() {
   };
 
   const presets = category ? APPLIANCE_PRESETS[category] : [];
-  const canSubmit = deviceName.trim() && location.trim() && category && selectedPreset && ratedWatts > 0;
+  const canSubmit = deviceName.trim() && category && selectedPreset && ratedWatts > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -353,7 +353,7 @@ export function AddDeviceScanner() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Plug className="w-5 h-5 text-primary" />
-                Configure Device
+                Add Your Device
               </DialogTitle>
               <DialogDescription>
                 Choose the closest appliance to estimate energy use.
@@ -383,21 +383,24 @@ export function AddDeviceScanner() {
                 <Label htmlFor="deviceName">Device Name</Label>
                 <Input
                   id="deviceName"
-                  placeholder="e.g., Living Room Light"
+                  placeholder="My Fan"
                   value={deviceName}
                   onChange={(e) => setDeviceName(e.target.value)}
                 />
               </div>
 
-              {/* Location */}
+              {/* Description (optional) */}
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location">Description (optional)</Label>
                 <Input
                   id="location"
-                  placeholder="e.g., Living Room"
+                  placeholder="Bedroom"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  You may provide a description or room to help identify your device, or leave it blank.
+                </p>
               </div>
 
               {/* Category Selection */}

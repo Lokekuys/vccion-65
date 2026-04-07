@@ -20,6 +20,7 @@ import { ScheduleCountdown } from './ScheduleCountdown';
 import { ref, update } from 'firebase/database';
 import { rtdb } from '@/lib/firebase';
 import { getScheduleStatus, getScheduleLabel } from '@/lib/scheduleUtils';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -135,7 +136,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
               />
             </div>
             <span className="text-[10px] text-muted-foreground font-mono">
-              {connectionStatus !== 'connected' ? lastSeenText : ''}
+              {connectionStatus === 'offline' ? 'Device is currently offline.' : connectionStatus !== 'connected' ? lastSeenText : ''}
             </span>
           </div>
         </div>
@@ -164,7 +165,18 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           <LightLevelDisplay lux={sensorData.lightLevel} compact />
         </div>
 
-        <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={device.isOn} compact />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={device.isOn} compact />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Shows the total runtime of the device. If the device is offline, the timer is paused until it reconnects.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {countdownEndsAt && <div className="mt-2"><CountdownTimer endsAt={countdownEndsAt} /></div>}
         <div className="mt-2"><ScheduleCountdown device={device} /></div>
