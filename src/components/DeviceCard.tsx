@@ -135,9 +135,11 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
                 pulse={connectionStatus === 'connected'}
               />
             </div>
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {connectionStatus === 'offline' ? 'Device is currently offline.' : connectionStatus !== 'connected' ? lastSeenText : ''}
-            </span>
+            {connectionStatus !== 'connected' && connectionStatus !== 'offline' && lastSeenText && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {lastSeenText}
+              </span>
+            )}
           </div>
         </div>
 
