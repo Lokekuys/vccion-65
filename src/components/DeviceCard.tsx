@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain } from 'lucide-react';
+import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain, Zap } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { SmartPlug } from '@/types/device';
