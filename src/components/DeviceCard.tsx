@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain } from 'lucide-react';
+import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain, Zap } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { SmartPlug } from '@/types/device';
@@ -166,6 +166,24 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           <OccupancyDisplay status={sensorData.occupancy} compact />
           <LightLevelDisplay lux={sensorData.lightLevel} compact />
         </div>
+
+        {/* Live Wattage Reading */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-muted/50">
+                <Zap className="w-4 h-4 text-sensor-power" />
+                <span className="text-sm font-medium text-foreground">
+                  {powerData.currentWatts.toFixed(1)} W
+                </span>
+                <span className="text-xs text-muted-foreground">Live</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Automatically read from the device (no manual input needed).</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <TooltipProvider>
           <Tooltip>

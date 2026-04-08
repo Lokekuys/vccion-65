@@ -10,13 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG, type ConnectionStatus } from '@/lib/deviceStatus';
 import {
-  CATEGORY_OPTIONS,
-  APPLIANCE_PRESETS,
-  inferApplianceType,
-  type ApplianceCategory,
-  type AppliancePreset,
-} from '@/lib/appliancePresets';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,13 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface UnclaimedDevice {
   id: string;
@@ -56,10 +42,6 @@ export function AddDeviceScanner() {
   // Configuration fields
   const [deviceName, setDeviceName] = useState('');
   const [location, setLocation] = useState('');
-  const [category, setCategory] = useState<ApplianceCategory | ''>('');
-  const [selectedPreset, setSelectedPreset] = useState<string>('');
-  const [ratedWatts, setRatedWatts] = useState<number>(0);
-  const [isCustomWattage, setIsCustomWattage] = useState(false);
   const [claiming, setClaiming] = useState(false);
 
   // Tick every 5s to keep heartbeat status fresh
@@ -149,41 +131,13 @@ export function AddDeviceScanner() {
     setSelectedDevice(device);
     setDeviceName(device.name);
     setLocation('');
-    setCategory('');
-    setSelectedPreset('');
-    setRatedWatts(0);
-    setIsCustomWattage(false);
     setStep('configure');
   };
 
-  const handleCategoryChange = (cat: ApplianceCategory) => {
-    setCategory(cat);
-    setSelectedPreset('');
-    setRatedWatts(0);
-    setIsCustomWattage(false);
-  };
-
-  const handlePresetChange = (presetLabel: string) => {
-    setSelectedPreset(presetLabel);
-    if (!category) return;
-    const preset = APPLIANCE_PRESETS[category].find((p) => p.label === presetLabel);
-    if (preset) {
-      if (preset.isOther) {
-        setRatedWatts(0);
-        setIsCustomWattage(true);
-      } else {
-        setRatedWatts(preset.watts);
-        setIsCustomWattage(false);
-      }
-    }
-  };
-
   const handleClaim = async () => {
-    if (!selectedDevice || !deviceName.trim() || !category || !selectedPreset || ratedWatts <= 0) return;
+    if (!selectedDevice || !deviceName.trim()) return;
 
     setClaiming(true);
-    const applianceType = inferApplianceType(category, selectedPreset);
-    const pwmCompatible = applianceType === 'resistive';
 
     try {
       await update(ref(rtdb, `devices/${selectedDevice.id}`), {
@@ -191,17 +145,6 @@ export function AddDeviceScanner() {
         isRegistered: true,
         name: deviceName.trim(),
         location: location.trim() || '',
-        category,
-        deviceType: selectedPreset,
-        ratedWatts,
-        classification: {
-          type: applianceType,
-          pwmCompatible,
-          description: pwmCompatible
-            ? 'PWM dimming supported for resistive load'
-            : `PWM disabled for ${applianceType} load`,
-        },
-        brightness: pwmCompatible ? 50 : 100,
       });
       toast({
         title: 'Device Added',
@@ -226,10 +169,6 @@ export function AddDeviceScanner() {
     setSelectedDevice(null);
     setDeviceName('');
     setLocation('');
-    setCategory('');
-    setSelectedPreset('');
-    setRatedWatts(0);
-    setIsCustomWattage(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -237,8 +176,7 @@ export function AddDeviceScanner() {
     if (!newOpen) handleReset();
   };
 
-  const presets = category ? APPLIANCE_PRESETS[category] : [];
-  const canSubmit = deviceName.trim() && category && selectedPreset && ratedWatts > 0;
+  const canSubmit = !!deviceName.trim();
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -403,79 +341,9 @@ export function AddDeviceScanner() {
                 </p>
               </div>
 
-              {/* Category Selection */}
-              <div className="space-y-2">
-                <Label>Appliance Category</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => handleCategoryChange(opt.value)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
-                        category === opt.value
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
-                      }`}
-                    >
-                      <span className="text-2xl">{opt.icon}</span>
-                      <span className="text-xs font-semibold">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preset Selection */}
-              {category && (
-                <div className="space-y-2">
-                  <Label>Appliance Type</Label>
-                  <Select value={selectedPreset} onValueChange={handlePresetChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select appliance..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {presets.map((p) => (
-                        <SelectItem key={p.label} value={p.label}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!selectedPreset && (
-                    <p className="text-xs text-muted-foreground">
-                      If your appliance is not listed, select "Other" and enter wattage manually.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Rated Wattage */}
-              {selectedPreset && (
-                <div className="space-y-2">
-                  <Label htmlFor="ratedWatts">Rated Wattage (W)</Label>
-                  <Input
-                    id="ratedWatts"
-                    type="number"
-                    min={1}
-                    max={10000}
-                    placeholder="Enter wattage"
-                    value={ratedWatts || ''}
-                    onChange={(e) => setRatedWatts(Math.max(0, parseInt(e.target.value) || 0))}
-                    readOnly={!isCustomWattage}
-                    className={!isCustomWattage ? 'bg-muted' : ''}
-                  />
-                  {!isCustomWattage && (
-                    <p className="text-xs text-muted-foreground">
-                      Auto-filled from preset. Choose "Other" to enter manually.
-                    </p>
-                  )}
-                  {isCustomWattage && (
-                    <p className="text-xs text-warning">
-                      Enter the rated wattage of your appliance.
-                    </p>
-                  )}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Wattage will be automatically read from the device sensor.
+              </p>
             </div>
 
             <DialogFooter>
