@@ -323,6 +323,15 @@ export function DeviceDetailPanel({
 
           <Separator />
 
+          {/* Live Wattage */}
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+            <Zap className="w-4 h-4 text-sensor-power" />
+            <span className="text-sm font-medium text-foreground">
+              {powerData.currentWatts.toFixed(1)} W
+            </span>
+            <span className="text-xs text-muted-foreground">Live</span>
+          </div>
+
           {/* Sensor Readings */}
           <div className="space-y-3">
             <OccupancyDisplay status={sensorData.occupancy} />
