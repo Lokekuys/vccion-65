@@ -180,7 +180,8 @@ export function useDevices() {
 
     const now = new Date();
     const perDevice = devices.map((d) => {
-      const watts = d.ratedWatts ?? 0;
+      // Use live PZEM wattage reading instead of rated wattage
+      const watts = d.powerData?.currentWatts ?? 0;
       // Calculate ON duration in hours
       let onHoursToday = 0;
       if (d.isOn && d.turnedOnAt) {
@@ -199,7 +200,7 @@ export function useDevices() {
       return {
         id: d.id,
         name: d.name,
-        deviceType: d.deviceType ?? 'Unknown',
+        deviceType: d.deviceType ?? d.name,
         ratedWatts: watts,
         onHoursToday,
         dailyKwh,

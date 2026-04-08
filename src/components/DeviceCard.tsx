@@ -167,6 +167,24 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           <LightLevelDisplay lux={sensorData.lightLevel} compact />
         </div>
 
+        {/* Live Wattage Reading */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-muted/50">
+                <Zap className="w-4 h-4 text-sensor-power" />
+                <span className="text-sm font-medium text-foreground">
+                  {powerData.currentWatts.toFixed(1)} W
+                </span>
+                <span className="text-xs text-muted-foreground">Live</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Automatically read from the device (no manual input needed).</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
