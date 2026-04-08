@@ -71,6 +71,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
 
   const sensorData = device.sensorData ?? { occupancy: 'vacant', lightLevel: 0 };
   const powerData = device.powerData ?? { currentWatts: 0, isAbnormal: false };
+  console.log("Device Power:", device.name, powerData.currentWatts);
   const automationSettings = device.automationSettings ?? { occupancyControlEnabled: false };
   const override = device.override ?? { active: false, permanent: false };
 

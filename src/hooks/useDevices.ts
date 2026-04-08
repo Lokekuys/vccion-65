@@ -103,10 +103,10 @@ export function useDevices() {
             },
 
             powerData: {
-              currentWatts: d.power ?? d.powerData?.currentWatts ?? 0,
-              voltage: d.voltage ?? d.powerData?.voltage ?? 220,
-              current: d.current ?? d.powerData?.current ?? 0,
-              todayKwh: d.energy ?? d.powerData?.todayKwh ?? 0,
+              currentWatts: d.pzemTest?.power ?? d.power ?? d.powerData?.currentWatts ?? 0,
+              voltage: d.pzemTest?.voltage ?? d.voltage ?? d.powerData?.voltage ?? 220,
+              current: d.pzemTest?.current ?? d.current ?? d.powerData?.current ?? 0,
+              todayKwh: d.pzemTest?.energy ?? d.energy ?? d.powerData?.todayKwh ?? 0,
               isAbnormal: d.powerData?.isAbnormal ?? false,
             },
 
