@@ -9,6 +9,7 @@ import {
   Wifi,
   WifiOff,
   AlertTriangle,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from "@/lib/deviceStatus";
