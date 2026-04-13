@@ -56,6 +56,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
   const statusConfig = STATUS_CONFIG[connectionStatus];
   const lastSeenText = formatLastSeen(device.lastSeen);
   const isDeviceOnline = connectionStatus === 'connected';
+  const effectiveIsOn = isDeviceOnline ? device.isOn : false;
 
   const handleToggle = () => {
     if (connectionStatus === 'offline') {
@@ -99,8 +100,8 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className={cn('flex items-center justify-center w-10 h-10 rounded-lg transition-colors', device.isOn ? 'bg-energy/10' : 'bg-muted')}>
-              <PowerIndicator isOn={device.isOn} size="lg" />
+            <div className={cn('flex items-center justify-center w-10 h-10 rounded-lg transition-colors', effectiveIsOn ? 'bg-energy/10' : 'bg-muted')}>
+              <PowerIndicator isOn={effectiveIsOn} size="lg" />
             </div>
             <div onClick={(e) => e.stopPropagation()}>
               {isEditingName ? (
@@ -190,7 +191,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={device.isOn} compact />
+                <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={effectiveIsOn} compact />
               </div>
             </TooltipTrigger>
             <TooltipContent>
@@ -206,11 +207,11 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
         <div className="flex items-center justify-between mt-4 pt-4 border-t">
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Switch
-              checked={device.isOn}
+              checked={effectiveIsOn}
               onCheckedChange={handleToggle}
               disabled={connectionStatus === 'offline'}
             />
-            <span className="text-sm text-muted-foreground">{device.isOn ? 'On' : 'Off'}</span>
+            <span className="text-sm text-muted-foreground">{effectiveIsOn ? 'On' : 'Off'}</span>
           </div>
 
           <Button variant="ghost" size="sm" className={cn('transition-transform', isHovered && 'translate-x-1')}>
