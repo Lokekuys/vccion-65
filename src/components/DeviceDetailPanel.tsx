@@ -91,6 +91,7 @@ export function DeviceDetailPanel({
   const statusConfig = STATUS_CONFIG[connectionStatus];
   const lastSeenText = formatLastSeen(device.lastSeen);
   const isOffline = connectionStatus === 'offline';
+  const effectiveIsOn = !isOffline && device.isOn;
 
   const sensorData = device.sensorData ?? { occupancy: "vacant", lightLevel: 0 };
   const powerData = device.powerData ?? { currentWatts: 0, todayKwh: 0, isAbnormal: false };
@@ -336,7 +337,7 @@ export function DeviceDetailPanel({
           <div className="space-y-3">
             <OccupancyDisplay status={sensorData.occupancy} />
             <LightLevelDisplay lux={sensorData.lightLevel} />
-            <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={device.isOn} />
+            <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={effectiveIsOn} />
           </div>
 
           <Separator />
