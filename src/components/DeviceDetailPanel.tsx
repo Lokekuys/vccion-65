@@ -336,7 +336,7 @@ export function DeviceDetailPanel({
           <div className="space-y-3">
             <OccupancyDisplay status={sensorData.occupancy} />
             <LightLevelDisplay lux={sensorData.lightLevel} />
-            <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={device.isOn} />
+            <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={effectiveIsOn} />
           </div>
 
           <Separator />
