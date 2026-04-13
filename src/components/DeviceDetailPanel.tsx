@@ -170,7 +170,7 @@ export function DeviceDetailPanel({
           {isOffline && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
               <WifiOff className="w-4 h-4 shrink-0" />
-              <span>Device is offline — controls disabled</span>
+              <span>Device is offline</span>
             </div>
           )}
 
