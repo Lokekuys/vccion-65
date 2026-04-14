@@ -137,6 +137,18 @@ export function DeviceDetailPanel({
       onToggle(device.id);
     }
   };
+  const handleResetWifi = async () => {
+    setIsResettingWifi(true);
+    try {
+      await set(ref(rtdb, `devices/${device.id}/commands/resetWiFi`), true);
+      toast.success("Wi-Fi reset command sent. The device should restart and open its setup hotspot.");
+      setShowWifiReset(false);
+    } catch (error) {
+      toast.error("Failed to send Wi-Fi reset command. Please try again.");
+    } finally {
+      setIsResettingWifi(false);
+    }
+  };
 
 
   return (
