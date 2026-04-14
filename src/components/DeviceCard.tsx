@@ -43,6 +43,8 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(device.name);
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [newLocation, setNewLocation] = useState(device.location);
   const [showToggleWarning, setShowToggleWarning] = useState(false);
   const [, setTick] = useState(0);
 
