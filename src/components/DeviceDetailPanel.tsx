@@ -10,7 +10,12 @@ import {
   WifiOff,
   AlertTriangle,
   Zap,
+  RotateCcw,
+  Loader2,
 } from "lucide-react";
+import { ref, set } from "firebase/database";
+import { rtdb } from "@/lib/firebase";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from "@/lib/deviceStatus";
 import { SmartPlug, AutomationSettings, ScheduleEntry, ControlMode } from "@/types/device";
@@ -84,6 +89,8 @@ export function DeviceDetailPanel({
   onControlModeChange,
 }: DeviceDetailPanelProps) {
   const [showToggleWarning, setShowToggleWarning] = React.useState(false);
+  const [showWifiReset, setShowWifiReset] = React.useState(false);
+  const [isResettingWifi, setIsResettingWifi] = React.useState(false);
 
   if (!device) return null;
 
@@ -128,6 +135,18 @@ export function DeviceDetailPanel({
       setShowToggleWarning(true);
     } else {
       onToggle(device.id);
+    }
+  };
+  const handleResetWifi = async () => {
+    setIsResettingWifi(true);
+    try {
+      await set(ref(rtdb, `devices/${device.id}/commands/resetWiFi`), true);
+      toast.success("Wi-Fi reset command sent. The device should restart and open its setup hotspot.");
+      setShowWifiReset(false);
+    } catch (error) {
+      toast.error("Failed to send Wi-Fi reset command. Please try again.");
+    } finally {
+      setIsResettingWifi(false);
     }
   };
 
@@ -342,6 +361,24 @@ export function DeviceDetailPanel({
 
           <Separator />
 
+          {/* Wi-Fi Settings */}
+          <div className="space-y-2">
+            <Label className="font-medium">Connection Settings</Label>
+            <p className="text-xs text-muted-foreground">
+              Use this if the plug needs to connect to a different Wi-Fi network.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
+              onClick={() => setShowWifiReset(true)}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reconfigure Wi-Fi
+            </Button>
+          </div>
+
+          <Separator />
+
           {/* Remove */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -380,6 +417,35 @@ export function DeviceDetailPanel({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={() => onToggle(device.id)}>Continue</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={showWifiReset} onOpenChange={setShowWifiReset}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reconfigure Wi-Fi?</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <span className="block">This device will forget its current Wi-Fi network, restart, and return to setup mode.</span>
+            <span className="block">You will need to reconnect it through the setup hotspot.</span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isResettingWifi}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleResetWifi}
+            disabled={isResettingWifi}
+            className="bg-warning text-warning-foreground hover:bg-warning/90"
+          >
+            {isResettingWifi ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Reset Wi-Fi"
+            )}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
