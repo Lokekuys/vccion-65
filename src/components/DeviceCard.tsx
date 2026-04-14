@@ -133,8 +133,23 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
                   </button>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground">{device.location}</p>
-            </div>
+              {isEditingLocation ? (
+                <input
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  onBlur={handleLocationEdit}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLocationEdit()}
+                  className="border rounded px-2 py-1 text-xs w-full"
+                  autoFocus
+                />
+              ) : (
+                <div className="flex items-center gap-1">
+                  <p className="text-sm text-muted-foreground">{device.location}</p>
+                  <button onClick={() => setIsEditingLocation(true)} className="text-muted-foreground hover:text-foreground">
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
           </div>
 
           <div className="flex flex-col items-end gap-1">
