@@ -10,7 +10,12 @@ import {
   WifiOff,
   AlertTriangle,
   Zap,
+  RotateCcw,
+  Loader2,
 } from "lucide-react";
+import { ref, set } from "firebase/database";
+import { rtdb } from "@/lib/firebase";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from "@/lib/deviceStatus";
 import { SmartPlug, AutomationSettings, ScheduleEntry, ControlMode } from "@/types/device";
