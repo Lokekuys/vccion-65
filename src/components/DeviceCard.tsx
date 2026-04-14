@@ -91,6 +91,16 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
     setIsEditingName(false);
   };
 
+  const handleLocationEdit = async () => {
+    if (!newLocation.trim() || newLocation === device.location) {
+      setIsEditingLocation(false);
+      setNewLocation(device.location);
+      return;
+    }
+    await update(ref(rtdb, `devices/${device.id}`), { location: newLocation });
+    setIsEditingLocation(false);
+  };
+
   return (
     <Card
       className={cn('device-card cursor-pointer animate-fade-in', connectionStatus === 'offline' && 'opacity-60')}
