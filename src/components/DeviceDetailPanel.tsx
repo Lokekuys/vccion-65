@@ -89,6 +89,8 @@ export function DeviceDetailPanel({
   onControlModeChange,
 }: DeviceDetailPanelProps) {
   const [showToggleWarning, setShowToggleWarning] = React.useState(false);
+  const [showWifiReset, setShowWifiReset] = React.useState(false);
+  const [isResettingWifi, setIsResettingWifi] = React.useState(false);
 
   if (!device) return null;
 
