@@ -150,6 +150,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
                   </button>
                 </div>
               )}
+            </div>
           </div>
 
           <div className="flex flex-col items-end gap-1">
