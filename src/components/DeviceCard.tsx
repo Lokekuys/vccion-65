@@ -31,6 +31,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface DeviceCardProps {
   device: SmartPlug;
@@ -41,10 +51,9 @@ interface DeviceCardProps {
 
 export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: DeviceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [newName, setNewName] = useState(device.name);
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [newLocation, setNewLocation] = useState(device.location);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editName, setEditName] = useState(device.name);
+  const [editLocation, setEditLocation] = useState(device.location);
   const [showToggleWarning, setShowToggleWarning] = useState(false);
   const [, setTick] = useState(0);
 
@@ -81,24 +90,21 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
   const scheduleStatus = getScheduleStatus(device);
   const scheduleLabel = getScheduleLabel(scheduleStatus);
 
-  const handleRename = async () => {
-    if (!newName.trim() || newName === device.name) {
-      setIsEditingName(false);
-      setNewName(device.name);
-      return;
-    }
-    await update(ref(rtdb, `devices/${device.id}`), { name: newName });
-    setIsEditingName(false);
+  const handleOpenEditDialog = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditName(device.name);
+    setEditLocation(device.location);
+    setShowEditDialog(true);
   };
 
-  const handleLocationEdit = async () => {
-    if (!newLocation.trim() || newLocation === device.location) {
-      setIsEditingLocation(false);
-      setNewLocation(device.location);
-      return;
+  const handleSaveEdit = async () => {
+    const updates: Record<string, string> = {};
+    if (editName.trim() && editName !== device.name) updates.name = editName.trim();
+    if (editLocation.trim() && editLocation !== device.location) updates.location = editLocation.trim();
+    if (Object.keys(updates).length > 0) {
+      await update(ref(rtdb, `devices/${device.id}`), updates);
     }
-    await update(ref(rtdb, `devices/${device.id}`), { location: newLocation });
-    setIsEditingLocation(false);
+    setShowEditDialog(false);
   };
 
   return (
@@ -115,41 +121,14 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
             <div className={cn('flex items-center justify-center w-10 h-10 rounded-lg transition-colors', effectiveIsOn ? 'bg-energy/10' : 'bg-muted')}>
               <PowerIndicator isOn={effectiveIsOn} size="lg" />
             </div>
-            <div onClick={(e) => e.stopPropagation()}>
-              {isEditingName ? (
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onBlur={handleRename}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-                  className="border rounded px-2 py-1 text-sm w-full"
-                  autoFocus
-                />
-              ) : (
-                <div className="flex items-center gap-1">
-                  <h3 className="font-semibold text-foreground">{device.name}</h3>
-                  <button onClick={() => setIsEditingName(true)} className="text-muted-foreground hover:text-foreground">
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-              {isEditingLocation ? (
-                <input
-                  value={newLocation}
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  onBlur={handleLocationEdit}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLocationEdit()}
-                  className="border rounded px-2 py-1 text-xs w-full"
-                  autoFocus
-                />
-              ) : (
-                <div className="flex items-center gap-1">
-                  <p className="text-sm text-muted-foreground">{device.location}</p>
-                  <button onClick={() => setIsEditingLocation(true)} className="text-muted-foreground hover:text-foreground">
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
+            <div>
+              <div className="flex items-center gap-1">
+                <h3 className="font-semibold text-foreground">{device.name}</h3>
+                <button onClick={handleOpenEditDialog} className="text-muted-foreground hover:text-foreground">
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">{device.location}</p>
             </div>
           </div>
 
@@ -250,6 +229,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
         </div>
       </CardContent>
 
+      {/* Toggle Warning Dialog */}
       <AlertDialog open={showToggleWarning} onOpenChange={setShowToggleWarning}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -266,6 +246,40 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Device Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Edit Device</DialogTitle>
+            <DialogDescription>Update the name and location of your device.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="device-name">Name</Label>
+              <Input
+                id="device-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Device name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="device-location">Description</Label>
+              <Input
+                id="device-location"
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                placeholder="Device location"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
