@@ -43,6 +43,8 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(device.name);
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [newLocation, setNewLocation] = useState(device.location);
   const [showToggleWarning, setShowToggleWarning] = useState(false);
   const [, setTick] = useState(0);
 
@@ -89,6 +91,16 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
     setIsEditingName(false);
   };
 
+  const handleLocationEdit = async () => {
+    if (!newLocation.trim() || newLocation === device.location) {
+      setIsEditingLocation(false);
+      setNewLocation(device.location);
+      return;
+    }
+    await update(ref(rtdb, `devices/${device.id}`), { location: newLocation });
+    setIsEditingLocation(false);
+  };
+
   return (
     <Card
       className={cn('device-card cursor-pointer animate-fade-in', connectionStatus === 'offline' && 'opacity-60')}
@@ -121,7 +133,23 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
                   </button>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground">{device.location}</p>
+              {isEditingLocation ? (
+                <input
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  onBlur={handleLocationEdit}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLocationEdit()}
+                  className="border rounded px-2 py-1 text-xs w-full"
+                  autoFocus
+                />
+              ) : (
+                <div className="flex items-center gap-1">
+                  <p className="text-sm text-muted-foreground">{device.location}</p>
+                  <button onClick={() => setIsEditingLocation(true)} className="text-muted-foreground hover:text-foreground">
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
