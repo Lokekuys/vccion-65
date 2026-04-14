@@ -420,6 +420,35 @@ export function DeviceDetailPanel({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <AlertDialog open={showWifiReset} onOpenChange={setShowWifiReset}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reconfigure Wi-Fi?</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <span className="block">This device will forget its current Wi-Fi network, restart, and return to setup mode.</span>
+            <span className="block">You will need to reconnect it through the setup hotspot.</span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isResettingWifi}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleResetWifi}
+            disabled={isResettingWifi}
+            className="bg-warning text-warning-foreground hover:bg-warning/90"
+          >
+            {isResettingWifi ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Reset Wi-Fi"
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
