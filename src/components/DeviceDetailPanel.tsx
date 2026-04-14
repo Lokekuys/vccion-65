@@ -361,6 +361,24 @@ export function DeviceDetailPanel({
 
           <Separator />
 
+          {/* Wi-Fi Settings */}
+          <div className="space-y-2">
+            <Label className="font-medium">Connection Settings</Label>
+            <p className="text-xs text-muted-foreground">
+              Use this if the plug needs to connect to a different Wi-Fi network.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
+              onClick={() => setShowWifiReset(true)}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reconfigure Wi-Fi
+            </Button>
+          </div>
+
+          <Separator />
+
           {/* Remove */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
