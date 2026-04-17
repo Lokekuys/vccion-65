@@ -242,6 +242,18 @@ export function useDevices() {
     };
   }, [devices, vecoRate, monthlyBudget]);
 
+  /* ---------- HISTORY-BASED ANALYTICS (source of truth) ---------- */
+  const deviceMeta = useMemo(
+    () =>
+      (devices ?? []).map((d) => ({
+        id: d.id,
+        name: d.name,
+        deviceType: d.deviceType ?? d.name,
+      })),
+    [devices]
+  );
+  const historyAnalytics = useAnalyticsLogs(deviceMeta, vecoRate, monthlyBudget);
+
   /* ---------- AUTO-OFF TIMER LOGIC ---------- */
   const vacancyTimers = useRef<Record<string, NodeJS.Timeout>>({});
   const [countdowns, setCountdowns] = useState<Record<string, number>>({});
