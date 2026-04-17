@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { User, Sun, Zap, AlertTriangle, Clock } from 'lucide-react';
+import { User, Sun, Zap, AlertTriangle, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OccupancyStatus } from '@/types/device';
+import { getApplianceActivityLabel, formatRelativeTime, type ApplianceActivityFields } from '@/lib/applianceActivity';
 
 interface OccupancyDisplayProps {
   status: OccupancyStatus;
