@@ -546,6 +546,8 @@ export function PowerAnalytics({
                     </ResponsiveContainer>
                   </div>
                 )}
+              </>
+            ) : (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Wallet className="w-10 h-10 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
