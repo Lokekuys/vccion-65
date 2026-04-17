@@ -547,6 +547,7 @@ export function useDevices() {
     vecoRate,
     monthlyBudget,
     estimatedAnalytics,
+    historyAnalytics,
     systemStatus,
     toggleDevice,
     setBrightness,
