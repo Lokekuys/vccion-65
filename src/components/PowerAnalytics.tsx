@@ -9,40 +9,18 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { Zap, TrendingUp, Pencil, Check, X, AlertTriangle, Wallet, Target } from 'lucide-react';
+import { Zap, TrendingUp, Pencil, Check, X, AlertTriangle, Wallet, Target, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-
-interface DeviceEstimate {
-  id: string;
-  name: string;
-  deviceType: string;
-  ratedWatts: number;
-  onHoursToday: number;
-  dailyKwh: number;
-  dailyCost: number;
-  monthlyKwh: number;
-  monthlyCost: number;
-}
-
-interface EstimatedAnalytics {
-  perDevice: DeviceEstimate[];
-  totalDailyKwh: number;
-  totalDailyCost: number;
-  totalMonthlyKwh: number;
-  totalMonthlyCost: number;
-  highest: DeviceEstimate | null;
-  budgetStatus: 'ok' | 'nearing' | 'almost' | 'exceeded';
-  budgetPercent: number;
-  remainingBudget: number;
-}
+import type { AggregatedHistoryAnalytics } from '@/hooks/useAnalyticsLogs';
+import { formatDuration } from '@/lib/analyticsAggregation';
 
 interface PowerAnalyticsProps {
-  estimatedAnalytics: EstimatedAnalytics | null;
+  historyAnalytics: AggregatedHistoryAnalytics | null;
   vecoRate: number;
   monthlyBudget: number;
   onVecoRateChange: (rate: number) => void;
@@ -65,7 +43,7 @@ const BUDGET_LABELS: Record<string, string> = {
 };
 
 export function PowerAnalytics({
-  estimatedAnalytics,
+  historyAnalytics,
   vecoRate,
   monthlyBudget,
   onVecoRateChange,
@@ -77,14 +55,26 @@ export function PowerAnalytics({
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [editBudget, setEditBudget] = useState(monthlyBudget.toString());
 
-  const analytics = estimatedAnalytics;
+  const analytics = historyAnalytics;
 
-  const chartData = useMemo(() => {
+  // Per-device chart data sorted by today's kWh
+  const perDeviceChart = useMemo(() => {
     if (!analytics) return [];
-    return analytics.perDevice
-      .filter((d) => d.dailyKwh > 0)
-      .sort((a, b) => b.dailyKwh - a.dailyKwh);
+    return [...analytics.perDevice]
+      .filter((d) => d.todayKwh > 0)
+      .sort((a, b) => b.todayKwh - a.todayKwh);
   }, [analytics]);
+
+  // 7-day combined trend (zero-filled for continuity)
+  const weeklyChart = useMemo(() => {
+    if (!analytics) return [];
+    return analytics.combinedDailySeries.map((d) => ({
+      date: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }),
+      fullDate: d.date,
+      kwh: Number(d.kwh.toFixed(3)),
+      cost: Number((d.kwh * vecoRate).toFixed(2)),
+    }));
+  }, [analytics, vecoRate]);
 
   const handleSaveRate = () => {
     const parsed = parseFloat(editRate);
@@ -118,7 +108,7 @@ export function PowerAnalytics({
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2 text-base font-medium">
             <Zap className="w-4 h-4 text-sensor-power" />
-            Estimated Energy Analytics
+            Energy Analytics
           </CardTitle>
           <div className="flex items-center gap-2 text-sm">
             {isEditingRate ? (
@@ -155,7 +145,7 @@ export function PowerAnalytics({
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Values are <strong>estimated</strong> based on rated wattage × ON duration × VECO rate.
+          Based on <strong>recorded usage history</strong> (analyticsLogs). Persists when devices are off.
         </p>
       </CardHeader>
       <CardContent>
@@ -175,29 +165,83 @@ export function PowerAnalytics({
             </TabsTrigger>
           </TabsList>
 
-          {/* Daily Estimated Tab */}
+          {/* Daily Tab */}
           <TabsContent value="daily" className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg bg-muted p-3 text-center">
-                <span className="data-label text-xs">Est. Daily Energy</span>
+                <span className="data-label text-xs">Today's Energy</span>
                 <div className="font-bold text-lg text-foreground">
-                  {(analytics?.totalDailyKwh ?? 0).toFixed(3)}
+                  {(analytics?.totalTodayKwh ?? 0).toFixed(3)}
                   <span className="text-xs text-muted-foreground ml-1">kWh</span>
                 </div>
               </div>
               <div className="rounded-lg bg-muted p-3 text-center">
-                <span className="data-label text-xs">Est. Daily Cost</span>
+                <span className="data-label text-xs">Today's Cost</span>
                 <div className="font-bold text-lg text-foreground">
-                  ₱{(analytics?.totalDailyCost ?? 0).toFixed(2)}
+                  ₱{(analytics?.totalTodayCost ?? 0).toFixed(2)}
                 </div>
               </div>
             </div>
 
-            {/* Per-device chart */}
-            {chartData.length > 0 && (
-              <div className="h-48">
+            {/* 7-day trend chart — always rendered for continuity */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                Last 7 Days
+              </div>
+              <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 5 }}>
+                  <BarChart data={weeklyChart} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                      tickFormatter={(v) => `${v}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 'var(--radius)',
+                        fontSize: '12px',
+                        color: 'hsl(var(--foreground))',
+                      }}
+                      formatter={(value: number, name) =>
+                        name === 'kwh'
+                          ? [`${value.toFixed(3)} kWh`, 'Usage']
+                          : [`₱${value.toFixed(2)}`, 'Cost']
+                      }
+                    />
+                    <Bar dataKey="kwh" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                      {weeklyChart.map((_, i) => (
+                        <Cell
+                          key={i}
+                          fill={
+                            i === weeklyChart.length - 1
+                              ? 'hsl(var(--primary))'
+                              : 'hsl(var(--primary) / 0.4)'
+                          }
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Per-device today */}
+            {perDeviceChart.length > 0 && (
+              <div className="h-44">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Today's Usage by Device</p>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={perDeviceChart} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                     <XAxis
                       type="number"
@@ -222,10 +266,10 @@ export function PowerAnalytics({
                         fontSize: '12px',
                         color: 'hsl(var(--foreground))',
                       }}
-                      formatter={(value: number) => [`${value.toFixed(4)} kWh`, 'Est. Usage']}
+                      formatter={(value: number) => [`${value.toFixed(4)} kWh`, 'Today']}
                     />
-                    <Bar dataKey="dailyKwh" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                      {chartData.map((_, i) => (
+                    <Bar dataKey="todayKwh" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                      {perDeviceChart.map((_, i) => (
                         <Cell key={i} fill={i === 0 ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.5)'} />
                       ))}
                     </Bar>
@@ -234,11 +278,11 @@ export function PowerAnalytics({
               </div>
             )}
 
-            {analytics?.highest && analytics.highest.dailyKwh > 0 && (
+            {analytics?.highestToday && analytics.highestToday.todayKwh > 0 && (
               <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10 border border-warning/20 text-sm">
                 <TrendingUp className="w-4 h-4 text-warning shrink-0" />
                 <span className="text-foreground">
-                  Highest consumer: <strong>{analytics.highest.name}</strong> ({analytics.highest.deviceType}) — est. {analytics.highest.dailyKwh.toFixed(3)} kWh today
+                  Highest today: <strong>{analytics.highestToday.name}</strong> — {analytics.highestToday.todayKwh.toFixed(3)} kWh
                 </span>
               </div>
             )}
@@ -252,11 +296,13 @@ export function PowerAnalytics({
                     <div key={d.id} className="flex items-center justify-between text-xs p-2 rounded bg-muted/50">
                       <div className="flex flex-col">
                         <span className="font-medium text-foreground">{d.name}</span>
-                        <span className="text-muted-foreground">{d.deviceType} · {d.ratedWatts}W</span>
+                        <span className="text-muted-foreground">
+                          {d.deviceType} · Active {formatDuration(d.todayActiveSeconds)}
+                        </span>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono text-foreground">{d.dailyKwh.toFixed(3)} kWh</div>
-                        <div className="text-muted-foreground">₱{d.dailyCost.toFixed(2)}</div>
+                        <div className="font-mono text-foreground">{d.todayKwh.toFixed(3)} kWh</div>
+                        <div className="text-muted-foreground">₱{d.todayCost.toFixed(2)}</div>
                       </div>
                     </div>
                   ))}
@@ -265,38 +311,38 @@ export function PowerAnalytics({
             )}
           </TabsContent>
 
-          {/* Monthly Estimated Tab */}
+          {/* Monthly Tab */}
           <TabsContent value="monthly" className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg bg-muted p-3 text-center">
-                <span className="data-label text-xs">Est. Monthly Energy</span>
+                <span className="data-label text-xs">Month-to-Date Energy</span>
                 <div className="font-bold text-lg text-foreground">
-                  {(analytics?.totalMonthlyKwh ?? 0).toFixed(1)}
+                  {(analytics?.totalMonthKwh ?? 0).toFixed(2)}
                   <span className="text-xs text-muted-foreground ml-1">kWh</span>
                 </div>
               </div>
               <div className="rounded-lg bg-muted p-3 text-center">
-                <span className="data-label text-xs">Est. Monthly Cost</span>
+                <span className="data-label text-xs">Month-to-Date Cost</span>
                 <div className="font-bold text-lg text-foreground">
-                  ₱{(analytics?.totalMonthlyCost ?? 0).toFixed(2)}
+                  ₱{(analytics?.totalMonthCost ?? 0).toFixed(2)}
                 </div>
               </div>
             </div>
 
             {analytics && analytics.perDevice.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Monthly Per-Device Estimate</p>
-                {analytics.perDevice
-                  .sort((a, b) => b.monthlyCost - a.monthlyCost)
+                <p className="text-xs font-medium text-muted-foreground">Monthly Per-Device</p>
+                {[...analytics.perDevice]
+                  .sort((a, b) => b.monthCost - a.monthCost)
                   .map((d) => (
                     <div key={d.id} className="flex items-center justify-between text-xs p-2 rounded bg-muted/50">
                       <div className="flex flex-col">
                         <span className="font-medium text-foreground">{d.name}</span>
-                        <span className="text-muted-foreground">{d.deviceType} · {d.ratedWatts}W</span>
+                        <span className="text-muted-foreground">{d.deviceType}</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono text-foreground">{d.monthlyKwh.toFixed(1)} kWh</div>
-                        <div className="text-muted-foreground">₱{d.monthlyCost.toFixed(2)}</div>
+                        <div className="font-mono text-foreground">{d.monthKwh.toFixed(2)} kWh</div>
+                        <div className="text-muted-foreground">₱{d.monthCost.toFixed(2)}</div>
                       </div>
                     </div>
                   ))}
@@ -304,13 +350,12 @@ export function PowerAnalytics({
             )}
 
             <p className="text-xs text-center text-muted-foreground italic">
-              Monthly estimates are projected from today's usage patterns (daily × 30).
+              Month-to-date totals are summed from recorded analyticsLogs.
             </p>
           </TabsContent>
 
           {/* Budget Tab */}
           <TabsContent value="budget" className="space-y-4">
-            {/* Set Budget */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -359,25 +404,20 @@ export function PowerAnalytics({
 
             {monthlyBudget > 0 && analytics ? (
               <>
-                {/* Budget Progress */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Est. Monthly Cost</span>
+                    <span className="text-muted-foreground">Month-to-Date Cost</span>
                     <span className={`font-bold ${BUDGET_COLORS[analytics.budgetStatus]}`}>
-                      ₱{analytics.totalMonthlyCost.toFixed(2)}
+                      ₱{analytics.totalMonthCost.toFixed(2)}
                     </span>
                   </div>
-                  <Progress
-                    value={Math.min(analytics.budgetPercent, 100)}
-                    className="h-3"
-                  />
+                  <Progress value={Math.min(analytics.budgetPercent, 100)} className="h-3" />
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{analytics.budgetPercent.toFixed(0)}% of budget</span>
                     <span>₱{monthlyBudget.toFixed(0)} limit</span>
                   </div>
                 </div>
 
-                {/* Status Badge */}
                 <div className="flex items-center gap-2">
                   {analytics.budgetStatus !== 'ok' && (
                     <AlertTriangle className={`w-4 h-4 ${BUDGET_COLORS[analytics.budgetStatus]}`} />
@@ -396,7 +436,6 @@ export function PowerAnalytics({
                   </Badge>
                 </div>
 
-                {/* Remaining */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg bg-muted p-3 text-center">
                     <span className="data-label text-xs">Remaining Budget</span>
@@ -416,7 +455,7 @@ export function PowerAnalytics({
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Wallet className="w-10 h-10 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
-                  Set a monthly budget to track your estimated energy spending.
+                  Set a monthly budget to track your energy spending.
                 </p>
               </div>
             )}
