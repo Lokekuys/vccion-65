@@ -11,6 +11,7 @@ import {
   ControlMode,
 } from "@/types/device";
 import { getScheduleStatus, getNextScheduleBoundary } from "@/lib/scheduleUtils";
+import { useAnalyticsLogs } from "@/hooks/useAnalyticsLogs";
 
 /* ---------- HOOK ---------- */
 
@@ -240,6 +241,18 @@ export function useDevices() {
       remainingBudget: monthlyBudget > 0 ? Math.max(0, monthlyBudget - totalMonthlyCost) : 0,
     };
   }, [devices, vecoRate, monthlyBudget]);
+
+  /* ---------- HISTORY-BASED ANALYTICS (source of truth) ---------- */
+  const deviceMeta = useMemo(
+    () =>
+      (devices ?? []).map((d) => ({
+        id: d.id,
+        name: d.name,
+        deviceType: d.deviceType ?? d.name,
+      })),
+    [devices]
+  );
+  const historyAnalytics = useAnalyticsLogs(deviceMeta, vecoRate, monthlyBudget);
 
   /* ---------- AUTO-OFF TIMER LOGIC ---------- */
   const vacancyTimers = useRef<Record<string, NodeJS.Timeout>>({});
@@ -534,6 +547,7 @@ export function useDevices() {
     vecoRate,
     monthlyBudget,
     estimatedAnalytics,
+    historyAnalytics,
     systemStatus,
     toggleDevice,
     setBrightness,

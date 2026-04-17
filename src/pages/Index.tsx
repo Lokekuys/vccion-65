@@ -31,7 +31,7 @@ const Index = () => {
     countdowns,
     vecoRate,
     monthlyBudget,
-    estimatedAnalytics,
+    historyAnalytics,
     systemStatus,
     toggleDevice,
     setBrightness,
@@ -155,7 +155,7 @@ const Index = () => {
 
         {/* POWER ANALYTICS */}
         <PowerAnalytics 
-          estimatedAnalytics={estimatedAnalytics}
+          historyAnalytics={historyAnalytics}
           vecoRate={vecoRate}
           monthlyBudget={monthlyBudget}
           onVecoRateChange={updateVecoRate}
