@@ -501,8 +501,51 @@ export function PowerAnalytics({
                     </div>
                   </div>
                 </div>
-              </>
-            ) : (
+
+                {/* Per-device cost chart with fixed 0-100 PHP scale */}
+                {analytics.perDevice.length > 0 && (
+                  <div className="h-44">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Cost by Device (Month-to-date)</p>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[...analytics.perDevice].sort((a, b) => b.monthCost - a.monthCost)}
+                        layout="vertical"
+                        margin={{ top: 5, right: 10, left: 5, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                        <XAxis
+                          type="number"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          domain={[0, 100]}
+                          ticks={[0, 20, 40, 60, 80, 100]}
+                          allowDataOverflow
+                          tickFormatter={(v) => `₱${v}`}
+                        />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          width={90}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 'var(--radius)',
+                            fontSize: '12px',
+                            color: 'hsl(var(--foreground))',
+                          }}
+                          formatter={(value: number) => [`₱${value.toFixed(2)}`, 'Cost']}
+                        />
+                        <Bar dataKey="monthCost" radius={[0, 4, 4, 0]} maxBarSize={20} fill="hsl(var(--primary))" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Wallet className="w-10 h-10 text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground">
