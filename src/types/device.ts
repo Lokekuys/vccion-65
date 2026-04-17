@@ -78,6 +78,10 @@ export interface SmartPlug {
   category?: string; // 'lights' | 'fans' | 'others'
   deviceType?: string; // preset label e.g. "LED Bulb 9W"
   ratedWatts?: number; // rated wattage for estimated analytics
+  // Appliance activity (firmware-driven, threshold >= 2.5W)
+  applianceActiveNow?: boolean;
+  lastApplianceActiveAt?: number; // ms epoch
+  lastApplianceActiveReadable?: string;
 }
 
 export interface PowerUsageEntry {
