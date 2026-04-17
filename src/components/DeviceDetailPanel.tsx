@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   OccupancyDisplay,
   LightLevelDisplay,
-  OnDurationDisplay,
+  ApplianceActivityDisplay,
 } from "./SensorDisplay";
 import {
   Sheet,
@@ -356,7 +356,11 @@ export function DeviceDetailPanel({
           <div className="space-y-3">
             <OccupancyDisplay status={sensorData.occupancy} />
             <LightLevelDisplay lux={sensorData.lightLevel} />
-            <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={effectiveIsOn} />
+            <ApplianceActivityDisplay
+              applianceActiveNow={device.applianceActiveNow}
+              lastApplianceActiveAt={device.lastApplianceActiveAt}
+              lastApplianceActiveReadable={device.lastApplianceActiveReadable}
+            />
           </div>
 
           <Separator />
