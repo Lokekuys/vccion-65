@@ -11,6 +11,7 @@ import {
   ControlMode,
 } from "@/types/device";
 import { getScheduleStatus, getNextScheduleBoundary } from "@/lib/scheduleUtils";
+import { useAnalyticsLogs } from "@/hooks/useAnalyticsLogs";
 
 /* ---------- HOOK ---------- */
 
