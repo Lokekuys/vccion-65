@@ -203,7 +203,10 @@ export function PowerAnalytics({
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      tickFormatter={(v) => `${v}`}
+                      domain={[0, 0.5]}
+                      ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]}
+                      allowDataOverflow
+                      tickFormatter={(v) => `${Number(v).toFixed(1)} kWh`}
                     />
                     <Tooltip
                       contentStyle={{
@@ -248,7 +251,10 @@ export function PowerAnalytics({
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      tickFormatter={(v) => `${v.toFixed(2)}`}
+                      domain={[0, 0.5]}
+                      ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]}
+                      allowDataOverflow
+                      tickFormatter={(v) => `${Number(v).toFixed(1)}`}
                     />
                     <YAxis
                       dataKey="name"
@@ -328,6 +334,51 @@ export function PowerAnalytics({
                 </div>
               </div>
             </div>
+
+            {/* Monthly per-device chart with fixed 0-15 kWh scale */}
+            {analytics && analytics.perDevice.length > 0 && (
+              <div className="h-44">
+                <p className="text-xs font-medium text-muted-foreground mb-1">This Month by Device</p>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[...analytics.perDevice].sort((a, b) => b.monthKwh - a.monthKwh)}
+                    layout="vertical"
+                    margin={{ top: 5, right: 10, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                      domain={[0, 15]}
+                      ticks={[0, 3, 6, 9, 12, 15]}
+                      allowDataOverflow
+                      tickFormatter={(v) => `${v} kWh`}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                      width={90}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 'var(--radius)',
+                        fontSize: '12px',
+                        color: 'hsl(var(--foreground))',
+                      }}
+                      formatter={(value: number) => [`${value.toFixed(2)} kWh`, 'Month-to-date']}
+                    />
+                    <Bar dataKey="monthKwh" radius={[0, 4, 4, 0]} maxBarSize={20} fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
             {analytics && analytics.perDevice.length > 0 && (
               <div className="space-y-1.5">
@@ -450,6 +501,51 @@ export function PowerAnalytics({
                     </div>
                   </div>
                 </div>
+
+                {/* Per-device cost chart with fixed 0-100 PHP scale */}
+                {analytics.perDevice.length > 0 && (
+                  <div className="h-44">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Cost by Device (Month-to-date)</p>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[...analytics.perDevice].sort((a, b) => b.monthCost - a.monthCost)}
+                        layout="vertical"
+                        margin={{ top: 5, right: 10, left: 5, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                        <XAxis
+                          type="number"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          domain={[0, 100]}
+                          ticks={[0, 20, 40, 60, 80, 100]}
+                          allowDataOverflow
+                          tickFormatter={(v) => `₱${v}`}
+                        />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          width={90}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 'var(--radius)',
+                            fontSize: '12px',
+                            color: 'hsl(var(--foreground))',
+                          }}
+                          formatter={(value: number) => [`₱${value.toFixed(2)}`, 'Cost']}
+                        />
+                        <Bar dataKey="monthCost" radius={[0, 4, 4, 0]} maxBarSize={20} fill="hsl(var(--primary))" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex flex-col items-center gap-2 py-6 text-center">

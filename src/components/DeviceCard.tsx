@@ -12,7 +12,7 @@ import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from '@/lib/de
 import {
   OccupancyDisplay,
   LightLevelDisplay,
-  OnDurationDisplay,
+  ApplianceActivityDisplay,
 } from './SensorDisplay';
 import { Badge } from '@/components/ui/badge';
 import { CountdownTimer } from './CountdownTimer';
@@ -198,11 +198,16 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <OnDurationDisplay turnedOnAt={device.turnedOnAt} isOn={effectiveIsOn} compact />
+                <ApplianceActivityDisplay
+                  applianceActiveNow={device.applianceActiveNow}
+                  lastApplianceActiveAt={device.lastApplianceActiveAt}
+                  lastApplianceActiveReadable={device.lastApplianceActiveReadable}
+                  compact
+                />
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Shows the total runtime of the device. If the device is offline, the timer is paused until it reconnects.</p>
+              <p>Detected when the connected appliance draws ≥ 2.5W. Idle plug power (1.0–1.9W) is ignored.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

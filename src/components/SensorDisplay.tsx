@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { User, Sun, Zap, AlertTriangle, Clock } from 'lucide-react';
+import { User, Sun, Zap, AlertTriangle, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OccupancyStatus } from '@/types/device';
+import { getApplianceActivityLabel, formatRelativeTime, type ApplianceActivityFields } from '@/lib/applianceActivity';
 
 interface OccupancyDisplayProps {
   status: OccupancyStatus;
@@ -115,59 +116,66 @@ export function PowerDisplay({ watts, isAbnormal = false, compact = false }: Pow
   );
 }
 
-interface OnDurationDisplayProps {
-  turnedOnAt?: string;
-  isOn: boolean;
+interface ApplianceActivityDisplayProps extends ApplianceActivityFields {
   compact?: boolean;
 }
 
-function formatDuration(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}m`;
-  if (m > 0) return `${m}m ${s.toString().padStart(2, '0')}s`;
-  return `${s}s`;
-}
-
-export function OnDurationDisplay({ turnedOnAt, isOn, compact = false }: OnDurationDisplayProps) {
-  const [elapsed, setElapsed] = useState(0);
+/**
+ * Shows appliance usage status using firmware-provided fields.
+ * Auto-refreshes every 30s so relative time strings stay current.
+ */
+export function ApplianceActivityDisplay({
+  applianceActiveNow,
+  lastApplianceActiveAt,
+  lastApplianceActiveReadable,
+  compact = false,
+}: ApplianceActivityDisplayProps) {
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    if (!isOn || !turnedOnAt) {
-      setElapsed(0);
-      return;
-    }
-    const start = new Date(turnedOnAt).getTime();
-    const tick = () => setElapsed(Math.max(0, Date.now() - start));
-    tick();
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(interval);
-  }, [isOn, turnedOnAt]);
+  }, []);
+
+  const { isActive, label } = getApplianceActivityLabel({
+    applianceActiveNow,
+    lastApplianceActiveAt,
+    lastApplianceActiveReadable,
+  });
 
   return (
-    <div className={cn(
-      'flex items-center gap-2 rounded-lg transition-colors',
-      compact ? 'p-2' : 'p-3',
-      isOn ? 'bg-energy/10' : 'bg-muted'
-    )}>
-      <div className={cn(
-        'flex items-center justify-center rounded-full p-1.5',
-        isOn ? 'bg-energy/20 text-energy' : 'bg-muted-foreground/20 text-muted-foreground'
-      )}>
-        <Clock className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+    <div
+      className={cn(
+        'flex items-center gap-2 rounded-lg transition-colors',
+        compact ? 'p-2' : 'p-3',
+        isActive ? 'bg-energy/10' : 'bg-muted'
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center justify-center rounded-full p-1.5',
+          isActive ? 'bg-energy/20 text-energy' : 'bg-muted-foreground/20 text-muted-foreground'
+        )}
+      >
+        <Activity className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
       </div>
-      <div className="flex flex-col">
-        <span className="data-label">On Duration</span>
-        <span className={cn(
-          'font-mono font-semibold',
-          compact ? 'text-sm' : 'text-base',
-          isOn ? 'text-energy' : 'text-muted-foreground'
-        )}>
-          {isOn && turnedOnAt ? formatDuration(elapsed) : 'Off'}
+      <div className="flex flex-col min-w-0">
+        <span className="data-label">Appliance Usage</span>
+        <span
+          className={cn(
+            'font-medium truncate',
+            compact ? 'text-sm' : 'text-base',
+            isActive ? 'text-energy' : 'text-muted-foreground'
+          )}
+        >
+          {label}
         </span>
       </div>
     </div>
   );
 }
+
+// Backwards-compat re-export so existing imports keep working.
+// (Old OnDurationDisplay has been replaced by ApplianceActivityDisplay.)
+export { formatRelativeTime };
+

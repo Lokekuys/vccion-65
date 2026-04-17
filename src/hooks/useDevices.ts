@@ -142,6 +142,9 @@ export function useDevices() {
             category: d.category ?? undefined,
             deviceType: d.deviceType ?? undefined,
             ratedWatts: d.ratedWatts ?? undefined,
+            applianceActiveNow: d.applianceActiveNow ?? false,
+            lastApplianceActiveAt: typeof d.lastApplianceActiveAt === 'number' ? d.lastApplianceActiveAt : 0,
+            lastApplianceActiveReadable: d.lastApplianceActiveReadable ?? undefined,
           };
           })
 
