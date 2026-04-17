@@ -203,7 +203,10 @@ export function PowerAnalytics({
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      tickFormatter={(v) => `${v}`}
+                      domain={[0, 0.5]}
+                      ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]}
+                      allowDataOverflow
+                      tickFormatter={(v) => `${Number(v).toFixed(1)} kWh`}
                     />
                     <Tooltip
                       contentStyle={{
@@ -248,7 +251,10 @@ export function PowerAnalytics({
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      tickFormatter={(v) => `${v.toFixed(2)}`}
+                      domain={[0, 0.5]}
+                      ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]}
+                      allowDataOverflow
+                      tickFormatter={(v) => `${Number(v).toFixed(1)}`}
                     />
                     <YAxis
                       dataKey="name"
