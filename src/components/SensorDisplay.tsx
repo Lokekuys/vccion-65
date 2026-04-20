@@ -118,6 +118,13 @@ export function PowerDisplay({ watts, isAbnormal = false, compact = false }: Pow
 
 interface ApplianceActivityDisplayProps extends ApplianceActivityFields {
   compact?: boolean;
+  /**
+   * When true, the display reports the appliance as INACTIVE regardless of
+   * applianceActiveNow. This is used to reflect a stale/offline plug
+   * without mutating any persisted Firebase data.
+   * The historical "Last active X ago" timestamp is still shown.
+   */
+  forceInactive?: boolean;
 }
 
 /**
@@ -129,6 +136,7 @@ export function ApplianceActivityDisplay({
   lastApplianceActiveAt,
   lastApplianceActiveReadable,
   compact = false,
+  forceInactive = false,
 }: ApplianceActivityDisplayProps) {
   const [, setTick] = useState(0);
 
@@ -137,11 +145,20 @@ export function ApplianceActivityDisplay({
     return () => clearInterval(interval);
   }, []);
 
-  const { isActive, label } = getApplianceActivityLabel({
-    applianceActiveNow,
+  const computed = getApplianceActivityLabel({
+    applianceActiveNow: forceInactive ? false : applianceActiveNow,
     lastApplianceActiveAt,
     lastApplianceActiveReadable,
   });
+
+  // When forced inactive (e.g. plug offline) override the primary label to
+  // "Inactive" but keep the historical "Last active X ago" as secondary text.
+  const isActive = computed.isActive;
+  const primaryLabel = forceInactive ? 'Inactive' : computed.label;
+  const secondaryLabel =
+    forceInactive && lastApplianceActiveAt && lastApplianceActiveAt > 0
+      ? computed.label.replace(/^Last active:\s*/, 'Last active ')
+      : null;
 
   return (
     <div
@@ -168,8 +185,13 @@ export function ApplianceActivityDisplay({
             isActive ? 'text-energy' : 'text-muted-foreground'
           )}
         >
-          {label}
+          {primaryLabel}
         </span>
+        {secondaryLabel && (
+          <span className="text-[11px] text-muted-foreground truncate">
+            {secondaryLabel}
+          </span>
+        )}
       </div>
     </div>
   );

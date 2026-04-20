@@ -109,7 +109,10 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
 
   return (
     <Card
-      className={cn('device-card cursor-pointer animate-fade-in', connectionStatus === 'offline' && 'opacity-60')}
+      className={cn(
+        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all',
+        connectionStatus === 'offline' && 'opacity-90'
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => onSelect(device)}
@@ -176,20 +179,24 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           <LightLevelDisplay lux={sensorData.lightLevel} compact />
         </div>
 
-        {/* Live Wattage Reading */}
+        {/* Live Wattage Reading — forced to 0 W when offline */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-muted/50">
                 <Zap className="w-4 h-4 text-sensor-power" />
                 <span className="text-sm font-medium text-foreground">
-                  {powerData.currentWatts.toFixed(1)} W
+                  {(connectionStatus === 'offline' ? 0 : powerData.currentWatts).toFixed(1)} W
                 </span>
-                <span className="text-xs text-muted-foreground">Live</span>
+                <span className="text-xs text-muted-foreground">
+                  {connectionStatus === 'offline' ? 'Offline' : 'Live'}
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Automatically read from the device (no manual input needed).</p>
+              <p>{connectionStatus === 'offline'
+                ? 'Live readings paused while the plug is offline.'
+                : 'Automatically read from the device (no manual input needed).'}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -199,9 +206,10 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
             <TooltipTrigger asChild>
               <div>
                 <ApplianceActivityDisplay
-                  applianceActiveNow={device.applianceActiveNow}
+                  applianceActiveNow={connectionStatus === 'offline' ? false : device.applianceActiveNow}
                   lastApplianceActiveAt={device.lastApplianceActiveAt}
                   lastApplianceActiveReadable={device.lastApplianceActiveReadable}
+                  forceInactive={connectionStatus === 'offline'}
                   compact
                 />
               </div>
@@ -233,6 +241,16 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           </Button>
         </div>
       </CardContent>
+
+      {/* Offline Overlay — visual only, no data mutation */}
+      {connectionStatus === 'offline' && (
+        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-3 bg-background/40 backdrop-blur-[1px] rounded-xl transition-opacity animate-fade-in">
+          <Badge variant="outline" className="pointer-events-auto bg-background/90 border-destructive/40 text-destructive gap-1.5 shadow-sm">
+            <WifiOff className="w-3 h-3" />
+            Device is Offline
+          </Badge>
+        </div>
+      )}
 
       {/* Toggle Warning Dialog */}
       <AlertDialog open={showToggleWarning} onOpenChange={setShowToggleWarning}>

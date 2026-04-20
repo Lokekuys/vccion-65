@@ -12,6 +12,7 @@ import {
 } from "@/types/device";
 import { getScheduleStatus, getNextScheduleBoundary } from "@/lib/scheduleUtils";
 import { useAnalyticsLogs } from "@/hooks/useAnalyticsLogs";
+import { computeConnectionStatus } from "@/lib/deviceStatus";
 
 /* ---------- HOOK ---------- */
 
@@ -20,8 +21,8 @@ export function useDevices() {
   const [vecoRate, setVecoRate] = useState<number>(12.79);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(0);
   const [dailyUsage] = useState<DailyUsage[]>([]);
-  const [sharedSensorData, setSharedSensorData] = useState<{ occupancy: string; lightLevel: number } | null>(null);
-  const sharedSensorRef = useRef<{ occupancy: string; lightLevel: number } | null>(null);
+  const [sharedSensorData, setSharedSensorData] = useState<{ occupancy: string; lightLevel: number; lastSeenMs: number } | null>(null);
+  const sharedSensorRef = useRef<{ occupancy: string; lightLevel: number; lastSeenMs: number } | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     espNowConnected: true,
     wifiConnected: true,
@@ -54,14 +55,23 @@ export function useDevices() {
   }, []);
 
   // Listen to shared sensor box (OccupancyPlug/sensorBox)
+  // IMPORTANT: sensor box state is INDEPENDENT from plug state.
+  // We only zero out sensor values if the sensor box itself stops reporting.
   useEffect(() => {
     const sensorRef = ref(rtdb, "OccupancyPlug/sensorBox");
     const unsubscribe = onValue(sensorRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
+        const lastSeenMs =
+          typeof data.lastSeen === "number"
+            ? data.lastSeen
+            : typeof data.lastUpdated === "number"
+            ? data.lastUpdated
+            : Date.now();
         const parsed = {
           occupancy: data.presence?.detected === true ? "occupied" : "vacant",
           lightLevel: data.lux ?? 0,
+          lastSeenMs,
         };
         sharedSensorRef.current = parsed;
         setSharedSensorData(parsed);
@@ -69,6 +79,18 @@ export function useDevices() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Tick every 10s so derived "sensor box online" recomputes even without new RTDB events
+  const [, setSensorTick] = useState(0);
+  useEffect(() => {
+    const i = setInterval(() => setSensorTick((t) => t + 1), 10_000);
+    return () => clearInterval(i);
+  }, []);
+
+  // Sensor box is considered online if it reported within last 60s
+  const SENSOR_BOX_TIMEOUT_MS = 60_000;
+  const isSensorBoxOnline =
+    !!sharedSensorData && Date.now() - sharedSensorData.lastSeenMs < SENSOR_BOX_TIMEOUT_MS;
 
   /* ---------- READ FROM FIREBASE ---------- */
   useEffect(() => {
@@ -96,8 +118,15 @@ export function useDevices() {
             (d.mode === 0 ? 'off' : d.mode === 1 ? 'manual' : d.mode === 2 ? 'smart' : d.mode === 3 ? 'scheduled' : 'manual'),
 
             sensorData: {
-              occupancy: sharedSensorRef.current?.occupancy ?? d.sensorData?.occupancy ?? "vacant",
-              lightLevel: sharedSensorRef.current?.lightLevel ?? d.sensorData?.lightLevel ?? 0,
+              // Sensor box state is independent from plug. If sensor box is offline,
+              // fall back to last device-stored values (or defaults), NOT to current
+              // sharedSensorRef which would be stale/unreachable.
+              occupancy: isSensorBoxOnline
+                ? (sharedSensorRef.current?.occupancy ?? d.sensorData?.occupancy ?? "vacant")
+                : (d.sensorData?.occupancy ?? "unknown"),
+              lightLevel: isSensorBoxOnline
+                ? (sharedSensorRef.current?.lightLevel ?? d.sensorData?.lightLevel ?? 0)
+                : (d.sensorData?.lightLevel ?? 0),
               lastUpdated: d.sensorData?.lastUpdated
                 ? new Date(d.sensorData.lastUpdated)
                 : new Date(),
@@ -162,9 +191,10 @@ export function useDevices() {
     return () => unsubscribe();
   }, []);
 
-  // Re-merge sensor data into devices when sharedSensorData changes
+  // Re-merge sensor data into devices when sharedSensorData changes.
+  // Only apply live values when the sensor box itself is currently online.
   useEffect(() => {
-    if (!sharedSensorData) return;
+    if (!sharedSensorData || !isSensorBoxOnline) return;
     setDevices((prev) => {
       if (!prev) return prev;
       return prev.map((d) => ({
@@ -176,7 +206,7 @@ export function useDevices() {
         },
       }));
     });
-  }, [sharedSensorData]);
+  }, [sharedSensorData, isSensorBoxOnline]);
 
   /* ---------- ESTIMATED ANALYTICS ---------- */
   const estimatedAnalytics = useMemo(() => {
@@ -252,6 +282,11 @@ export function useDevices() {
         id: d.id,
         name: d.name,
         deviceType: d.deviceType ?? d.name,
+        // Pass live state to analytics so per-device rows can show
+        // accurate "Inactive" / "Active now" labels (UI-only, no data mutation).
+        isOnline: computeConnectionStatus(d.lastSeen) === 'connected',
+        applianceActiveNow: d.applianceActiveNow ?? false,
+        lastApplianceActiveAt: d.lastApplianceActiveAt ?? 0,
       })),
     [devices]
   );
