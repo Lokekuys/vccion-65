@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import type { AggregatedHistoryAnalytics, DeviceHistoryAnalytics } from '@/hooks/useAnalyticsLogs';
 import { formatDuration } from '@/lib/analyticsAggregation';
 import { formatRelativeTime } from '@/lib/applianceActivity';
+import { cn } from '@/lib/utils';
 
 interface PowerAnalyticsProps {
   historyAnalytics: AggregatedHistoryAnalytics | null;
