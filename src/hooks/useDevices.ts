@@ -513,13 +513,27 @@ export function useDevices() {
     []
   );
 
-  // Soft-delete: mark as removed instead of clearing isClaimed
+  // Remove device: fully reset claim/registration/removal flags so it
+  // becomes immediately discoverable again by the Add Device scanner.
+  // We do NOT keep isRemoved=true because the scanner filters those out.
   const removeDevice = useCallback((deviceId: string) => {
     update(ref(rtdb, `devices/${deviceId}`), {
-      isRemoved: true,
-      removedAt: new Date().toISOString(),
       isClaimed: false,
       isRegistered: false,
+      isRemoved: false,
+      removedAt: new Date().toISOString(),
+      // Clear user-set metadata so the next claimer sees a fresh device
+      name: null,
+      location: null,
+      controlMode: 'manual',
+      mode: 1,
+    });
+  }, []);
+
+  const setSmartMode = useCallback((deviceId: string, mode: SmartMode) => {
+    update(ref(rtdb, `devices/${deviceId}`), {
+      smartMode: mode,
+      lastSeen: Date.now(),
     });
   }, []);
 
@@ -607,6 +621,7 @@ export function useDevices() {
     updateAutomation,
     setOverride,
     setControlMode,
+    setSmartMode,
     removeDevice,
     updateSchedule,
     updateVecoRate,
