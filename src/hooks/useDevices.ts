@@ -308,6 +308,7 @@ export function useDevices() {
         sensorData,
         automationSettings: auto,
         controlMode,
+        smartMode,
       } = device;
 
       if (controlMode !== 'smart') {
@@ -323,7 +324,19 @@ export function useDevices() {
         return;
       }
 
-      if (!isOn && sensorData.occupancy === "occupied") {
+      // Derive binary signals from sensors
+      const occupancySignal = sensorData.occupancy === 'occupied'; // 1 = occupied
+      const targetLux = auto.targetLux ?? 400;
+      const lightSignal = (sensorData.lightLevel ?? 0) < targetLux; // 1 = dark / needs light
+
+      // Determine if device SHOULD be on based on smart preset
+      let shouldBeOn = false;
+      const mode = smartMode ?? 'occupancy';
+      if (mode === 'occupancy') shouldBeOn = occupancySignal;
+      else if (mode === 'light') shouldBeOn = lightSignal;
+      else if (mode === 'both') shouldBeOn = occupancySignal && lightSignal;
+
+      if (!isOn && shouldBeOn) {
         update(ref(rtdb, `devices/${id}`), {
           isOn: true,
           relayState: true,
@@ -332,7 +345,7 @@ export function useDevices() {
         });
       }
 
-      if (isOn && sensorData.occupancy === "vacant") {
+      if (isOn && !shouldBeOn) {
         if (!auto.occupancyControlEnabled) {
           update(ref(rtdb, `devices/${id}`), {
             isOn: false,
