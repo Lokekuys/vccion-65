@@ -343,23 +343,26 @@ export function DeviceDetailPanel({
 
           <Separator />
 
-          {/* Live Wattage */}
+          {/* Live Wattage — forced to 0 W when offline */}
           <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
             <Zap className="w-4 h-4 text-sensor-power" />
             <span className="text-sm font-medium text-foreground">
-              {powerData.currentWatts.toFixed(1)} W
+              {(isOffline ? 0 : powerData.currentWatts).toFixed(1)} W
             </span>
-            <span className="text-xs text-muted-foreground">Live</span>
+            <span className="text-xs text-muted-foreground">
+              {isOffline ? 'Offline' : 'Live'}
+            </span>
           </div>
 
-          {/* Sensor Readings */}
+          {/* Sensor Readings — sensor box state is independent from plug */}
           <div className="space-y-3">
             <OccupancyDisplay status={sensorData.occupancy} />
             <LightLevelDisplay lux={sensorData.lightLevel} />
             <ApplianceActivityDisplay
-              applianceActiveNow={device.applianceActiveNow}
+              applianceActiveNow={isOffline ? false : device.applianceActiveNow}
               lastApplianceActiveAt={device.lastApplianceActiveAt}
               lastApplianceActiveReadable={device.lastApplianceActiveReadable}
+              forceInactive={isOffline}
             />
           </div>
 
