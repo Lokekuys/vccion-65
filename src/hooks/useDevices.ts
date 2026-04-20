@@ -9,6 +9,7 @@ import {
   SystemStatus,
   ApplianceType,
   ControlMode,
+  SmartMode,
 } from "@/types/device";
 import { getScheduleStatus, getNextScheduleBoundary } from "@/lib/scheduleUtils";
 import { useAnalyticsLogs } from "@/hooks/useAnalyticsLogs";
@@ -116,6 +117,7 @@ export function useDevices() {
             controlMode:
             d.controlMode ??
             (d.mode === 0 ? 'off' : d.mode === 1 ? 'manual' : d.mode === 2 ? 'smart' : d.mode === 3 ? 'scheduled' : 'manual'),
+            smartMode: (d.smartMode as SmartMode) ?? 'occupancy',
 
             sensorData: {
               // Sensor box state is independent from plug. If sensor box is offline,
