@@ -110,8 +110,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
   return (
     <Card
       className={cn(
-        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all',
-        connectionStatus === 'offline' && 'opacity-90'
+        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -147,6 +146,12 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
                 pulse={connectionStatus === 'connected'}
               />
             </div>
+            {connectionStatus === 'offline' && (
+              <Badge variant="outline" className="border-destructive/40 text-destructive gap-1 text-[10px] px-1.5 py-0">
+                <WifiOff className="w-2.5 h-2.5" />
+                Device is Offline
+              </Badge>
+            )}
             {connectionStatus !== 'connected' && connectionStatus !== 'offline' && lastSeenText && (
               <span className="text-[10px] text-muted-foreground font-mono">
                 {lastSeenText}
@@ -242,15 +247,6 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
         </div>
       </CardContent>
 
-      {/* Offline Overlay — visual only, no data mutation */}
-      {connectionStatus === 'offline' && (
-        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-3 bg-background/40 backdrop-blur-[1px] rounded-xl transition-opacity animate-fade-in">
-          <Badge variant="outline" className="pointer-events-auto bg-background/90 border-destructive/40 text-destructive gap-1.5 shadow-sm">
-            <WifiOff className="w-3 h-3" />
-            Device is Offline
-          </Badge>
-        </div>
-      )}
 
       {/* Toggle Warning Dialog */}
       <AlertDialog open={showToggleWarning} onOpenChange={setShowToggleWarning}>
