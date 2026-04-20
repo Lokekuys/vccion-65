@@ -530,7 +530,7 @@ export function PowerAnalytics({
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-lg bg-muted p-3 text-center">
                     <span className="data-label text-xs">Remaining Budget</span>
                     <div className="font-bold text-lg text-foreground">
