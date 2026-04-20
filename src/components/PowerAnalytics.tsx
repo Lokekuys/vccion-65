@@ -351,7 +351,7 @@ export function PowerAnalytics({
 
           {/* Monthly Tab */}
           <TabsContent value="monthly" className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-lg bg-muted p-3 text-center">
                 <span className="data-label text-xs">Month-to-Date Energy</span>
                 <div className="font-bold text-lg text-foreground">
