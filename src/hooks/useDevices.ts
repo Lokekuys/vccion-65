@@ -281,6 +281,11 @@ export function useDevices() {
         id: d.id,
         name: d.name,
         deviceType: d.deviceType ?? d.name,
+        // Pass live state to analytics so per-device rows can show
+        // accurate "Inactive" / "Active now" labels (UI-only, no data mutation).
+        isOnline: computeConnectionStatus(d.lastSeen) === 'connected',
+        applianceActiveNow: d.applianceActiveNow ?? false,
+        lastApplianceActiveAt: d.lastApplianceActiveAt ?? 0,
       })),
     [devices]
   );
