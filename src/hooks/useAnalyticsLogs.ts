@@ -30,6 +30,10 @@ export interface DeviceHistoryAnalytics {
   daily: Map<string, DailyAggregate>;
   monthly: Map<string, MonthlyAggregate>;
   logs: NormalizedLog[];
+  /** Live device state passed through for UI-only labels */
+  isOnline: boolean;
+  applianceActiveNow: boolean;
+  lastApplianceActiveAt: number;
 }
 
 export interface AggregatedHistoryAnalytics {
@@ -50,6 +54,9 @@ interface DeviceMeta {
   id: string;
   name: string;
   deviceType?: string;
+  isOnline?: boolean;
+  applianceActiveNow?: boolean;
+  lastApplianceActiveAt?: number;
 }
 
 /**
