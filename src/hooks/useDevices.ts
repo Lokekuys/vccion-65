@@ -20,8 +20,8 @@ export function useDevices() {
   const [vecoRate, setVecoRate] = useState<number>(12.79);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(0);
   const [dailyUsage] = useState<DailyUsage[]>([]);
-  const [sharedSensorData, setSharedSensorData] = useState<{ occupancy: string; lightLevel: number } | null>(null);
-  const sharedSensorRef = useRef<{ occupancy: string; lightLevel: number } | null>(null);
+  const [sharedSensorData, setSharedSensorData] = useState<{ occupancy: string; lightLevel: number; lastSeenMs: number } | null>(null);
+  const sharedSensorRef = useRef<{ occupancy: string; lightLevel: number; lastSeenMs: number } | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     espNowConnected: true,
     wifiConnected: true,
@@ -54,14 +54,23 @@ export function useDevices() {
   }, []);
 
   // Listen to shared sensor box (OccupancyPlug/sensorBox)
+  // IMPORTANT: sensor box state is INDEPENDENT from plug state.
+  // We only zero out sensor values if the sensor box itself stops reporting.
   useEffect(() => {
     const sensorRef = ref(rtdb, "OccupancyPlug/sensorBox");
     const unsubscribe = onValue(sensorRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
+        const lastSeenMs =
+          typeof data.lastSeen === "number"
+            ? data.lastSeen
+            : typeof data.lastUpdated === "number"
+            ? data.lastUpdated
+            : Date.now();
         const parsed = {
           occupancy: data.presence?.detected === true ? "occupied" : "vacant",
           lightLevel: data.lux ?? 0,
+          lastSeenMs,
         };
         sharedSensorRef.current = parsed;
         setSharedSensorData(parsed);
@@ -69,6 +78,18 @@ export function useDevices() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Tick every 10s so derived "sensor box online" recomputes even without new RTDB events
+  const [, setSensorTick] = useState(0);
+  useEffect(() => {
+    const i = setInterval(() => setSensorTick((t) => t + 1), 10_000);
+    return () => clearInterval(i);
+  }, []);
+
+  // Sensor box is considered online if it reported within last 60s
+  const SENSOR_BOX_TIMEOUT_MS = 60_000;
+  const isSensorBoxOnline =
+    !!sharedSensorData && Date.now() - sharedSensorData.lastSeenMs < SENSOR_BOX_TIMEOUT_MS;
 
   /* ---------- READ FROM FIREBASE ---------- */
   useEffect(() => {
