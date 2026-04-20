@@ -417,18 +417,29 @@ export function PowerAnalytics({
                 <p className="text-xs font-medium text-muted-foreground">Monthly Per-Device</p>
                 {[...analytics.perDevice]
                   .sort((a, b) => b.monthCost - a.monthCost)
-                  .map((d) => (
-                    <div key={d.id} className="flex items-center justify-between text-xs p-2 rounded bg-muted/50">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{d.name}</span>
-                        <span className="text-muted-foreground">{d.deviceType}</span>
+                  .map((d) => {
+                    const status = getDeviceStatus(d);
+                    return (
+                      <div key={d.id} className="flex items-center justify-between gap-2 text-xs p-2 rounded bg-muted/50">
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-medium text-foreground truncate">{d.name}</span>
+                          <span className={cn(
+                            "text-[11px] truncate",
+                            status.tone === 'active' ? 'text-energy' : 'text-muted-foreground/80'
+                          )}>
+                            {d.deviceType} · {status.primary}
+                            {status.secondary && (
+                              <span className="text-muted-foreground/70"> • {status.secondary}</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-mono text-foreground whitespace-nowrap">{d.monthKwh.toFixed(2)} kWh</div>
+                          <div className="text-muted-foreground whitespace-nowrap">₱{d.monthCost.toFixed(2)}</div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-mono text-foreground">{d.monthKwh.toFixed(2)} kWh</div>
-                        <div className="text-muted-foreground">₱{d.monthCost.toFixed(2)}</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
 
