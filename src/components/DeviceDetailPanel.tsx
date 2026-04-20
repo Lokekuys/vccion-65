@@ -12,13 +12,21 @@ import {
   Zap,
   RotateCcw,
   Loader2,
+  CloudOff,
 } from "lucide-react";
 import { ref, set } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from "@/lib/deviceStatus";
-import { SmartPlug, AutomationSettings, ScheduleEntry, ControlMode } from "@/types/device";
+import { SmartPlug, AutomationSettings, ScheduleEntry, ControlMode, SmartMode } from "@/types/device";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleEditor } from "./ScheduleEditor";
 import { Switch } from "@/components/ui/switch";
@@ -68,12 +76,19 @@ interface DeviceDetailPanelProps {
   onRemove: (deviceId: string) => void;
   onScheduleChange: (deviceId: string, schedule: ScheduleEntry) => void;
   onControlModeChange: (deviceId: string, mode: ControlMode) => void;
+  onSmartModeChange?: (deviceId: string, mode: SmartMode) => void;
 }
 
 const CONTROL_MODES: { value: ControlMode; label: string; icon: typeof Hand; description: string }[] = [
   { value: 'manual', label: 'Manual', icon: Hand, description: 'Direct ON/OFF control' },
   { value: 'scheduled', label: 'Scheduled', icon: Calendar, description: 'Follow time schedule' },
-  { value: 'smart', label: 'Smart', icon: Brain, description: 'Occupancy automation' },
+  { value: 'smart', label: 'Smart', icon: Brain, description: 'Sensor automation' },
+];
+
+const SMART_MODES: { value: SmartMode; label: string; description: string }[] = [
+  { value: 'occupancy', label: 'Smart One — Occupancy Only', description: 'Turns ON when the room is occupied. Ignores light.' },
+  { value: 'light', label: 'Smart Two — Light Only', description: 'Turns ON when the area is dark. Ignores occupancy.' },
+  { value: 'both', label: 'Smart Three — Occupancy + Light', description: 'Turns ON only when occupied AND dark.' },
 ];
 
 export function DeviceDetailPanel({
