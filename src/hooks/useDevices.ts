@@ -190,9 +190,10 @@ export function useDevices() {
     return () => unsubscribe();
   }, []);
 
-  // Re-merge sensor data into devices when sharedSensorData changes
+  // Re-merge sensor data into devices when sharedSensorData changes.
+  // Only apply live values when the sensor box itself is currently online.
   useEffect(() => {
-    if (!sharedSensorData) return;
+    if (!sharedSensorData || !isSensorBoxOnline) return;
     setDevices((prev) => {
       if (!prev) return prev;
       return prev.map((d) => ({
@@ -204,7 +205,7 @@ export function useDevices() {
         },
       }));
     });
-  }, [sharedSensorData]);
+  }, [sharedSensorData, isSensorBoxOnline]);
 
   /* ---------- ESTIMATED ANALYTICS ---------- */
   const estimatedAnalytics = useMemo(() => {
