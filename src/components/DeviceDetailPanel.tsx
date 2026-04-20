@@ -423,10 +423,16 @@ export function DeviceDetailPanel({
               variant="outline"
               className="w-full gap-2 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
               onClick={() => setShowWifiReset(true)}
+              disabled={isOffline}
             >
               <RotateCcw className="w-4 h-4" />
               Reconfigure Wi-Fi
             </Button>
+            {isOffline && (
+              <p className="text-[11px] text-muted-foreground">
+                Device must be online to reconfigure Wi-Fi.
+              </p>
+            )}
           </div>
 
           <Separator />
