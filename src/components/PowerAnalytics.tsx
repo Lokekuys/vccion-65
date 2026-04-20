@@ -171,7 +171,7 @@ export function PowerAnalytics({
           Based on <strong>recorded usage history</strong> (analyticsLogs). Persists when devices are off.
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6 overflow-hidden">
         <Tabs defaultValue="daily" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="daily" className="flex items-center gap-1 text-xs">
