@@ -12,6 +12,7 @@ import {
 } from "@/types/device";
 import { getScheduleStatus, getNextScheduleBoundary } from "@/lib/scheduleUtils";
 import { useAnalyticsLogs } from "@/hooks/useAnalyticsLogs";
+import { computeConnectionStatus } from "@/lib/deviceStatus";
 
 /* ---------- HOOK ---------- */
 
