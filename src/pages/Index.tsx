@@ -38,6 +38,7 @@ const Index = () => {
     updateAutomation,
     setOverride,
     setControlMode,
+    setSmartMode,
     removeDevice,
     updateSchedule,
     updateVecoRate,
@@ -207,6 +208,7 @@ const Index = () => {
           onRemove={removeDevice}
           onScheduleChange={updateSchedule}
           onControlModeChange={setControlMode}
+          onSmartModeChange={setSmartMode}
         />
       )}
     </div>

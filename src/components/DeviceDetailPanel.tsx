@@ -12,13 +12,21 @@ import {
   Zap,
   RotateCcw,
   Loader2,
+  CloudOff,
 } from "lucide-react";
 import { ref, set } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from "@/lib/deviceStatus";
-import { SmartPlug, AutomationSettings, ScheduleEntry, ControlMode } from "@/types/device";
+import { SmartPlug, AutomationSettings, ScheduleEntry, ControlMode, SmartMode } from "@/types/device";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleEditor } from "./ScheduleEditor";
 import { Switch } from "@/components/ui/switch";
@@ -68,12 +76,19 @@ interface DeviceDetailPanelProps {
   onRemove: (deviceId: string) => void;
   onScheduleChange: (deviceId: string, schedule: ScheduleEntry) => void;
   onControlModeChange: (deviceId: string, mode: ControlMode) => void;
+  onSmartModeChange?: (deviceId: string, mode: SmartMode) => void;
 }
 
 const CONTROL_MODES: { value: ControlMode; label: string; icon: typeof Hand; description: string }[] = [
   { value: 'manual', label: 'Manual', icon: Hand, description: 'Direct ON/OFF control' },
   { value: 'scheduled', label: 'Scheduled', icon: Calendar, description: 'Follow time schedule' },
-  { value: 'smart', label: 'Smart', icon: Brain, description: 'Occupancy automation' },
+  { value: 'smart', label: 'Smart', icon: Brain, description: 'Sensor automation' },
+];
+
+const SMART_MODES: { value: SmartMode; label: string; description: string }[] = [
+  { value: 'occupancy', label: 'Smart One — Occupancy Only', description: 'Turns ON when the room is occupied. Ignores light.' },
+  { value: 'light', label: 'Smart Two — Light Only', description: 'Turns ON when the area is dark. Ignores occupancy.' },
+  { value: 'both', label: 'Smart Three — Occupancy + Light', description: 'Turns ON only when occupied AND dark.' },
 ];
 
 export function DeviceDetailPanel({
@@ -87,6 +102,7 @@ export function DeviceDetailPanel({
   onRemove,
   onScheduleChange,
   onControlModeChange,
+  onSmartModeChange,
 }: DeviceDetailPanelProps) {
   const [showToggleWarning, setShowToggleWarning] = React.useState(false);
   const [showWifiReset, setShowWifiReset] = React.useState(false);
@@ -186,11 +202,21 @@ export function DeviceDetailPanel({
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Offline Banner */}
+          {/* Centered Offline State — replaces ugly overlay */}
           {isOffline && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-              <WifiOff className="w-4 h-4 shrink-0" />
-              <span>Device is offline</span>
+            <div className="flex flex-col items-center justify-center text-center gap-3 px-6 py-10 my-2 rounded-2xl border border-border/60 bg-muted/40 animate-fade-in">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-destructive/10 text-destructive">
+                <CloudOff className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold text-foreground">Device is Offline</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Live controls are temporarily unavailable. They will resume automatically when the plug reconnects.
+                </p>
+              </div>
+              {lastSeenText && (
+                <span className="text-[11px] text-muted-foreground font-mono">Last seen {lastSeenText}</span>
+              )}
             </div>
           )}
 
@@ -258,7 +284,26 @@ export function DeviceDetailPanel({
           {/* Smart Mode Settings (shown in smart mode) */}
           {controlMode === 'smart' && (
             <div className={cn("space-y-4", isOffline && "opacity-50 pointer-events-none")}>
-              <Label className="font-medium">Occupancy Automation</Label>
+              <div className="space-y-2">
+                <Label className="font-medium">Smart Automation Preset</Label>
+                <Select
+                  value={device.smartMode ?? 'occupancy'}
+                  onValueChange={(v) => onSmartModeChange?.(device.id, v as SmartMode)}
+                  disabled={isOffline}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a preset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SMART_MODES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {SMART_MODES.find((m) => m.value === (device.smartMode ?? 'occupancy'))?.description}
+                </p>
+              </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
                 <Label>Auto-Off on Vacancy</Label>
@@ -378,10 +423,16 @@ export function DeviceDetailPanel({
               variant="outline"
               className="w-full gap-2 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
               onClick={() => setShowWifiReset(true)}
+              disabled={isOffline}
             >
               <RotateCcw className="w-4 h-4" />
               Reconfigure Wi-Fi
             </Button>
+            {isOffline && (
+              <p className="text-[11px] text-muted-foreground">
+                Device must be online to reconfigure Wi-Fi.
+              </p>
+            )}
           </div>
 
           <Separator />
