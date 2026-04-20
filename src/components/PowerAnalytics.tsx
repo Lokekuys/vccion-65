@@ -56,6 +56,27 @@ export function PowerAnalytics({
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [editBudget, setEditBudget] = useState(monthlyBudget.toString());
 
+  /**
+   * Compute the row-level status label for a device in analytics.
+   * Rules:
+   *  - Offline → "Inactive" (+ "Last active Xm ago" if we have a timestamp)
+   *  - Online + applianceActiveNow → "Active now"
+   *  - Online + idle → "Inactive"
+   * Never shows misleading "Active 0m" for offline devices.
+   */
+  const getDeviceStatus = (d: DeviceHistoryAnalytics): { primary: string; secondary?: string; tone: 'active' | 'idle' } => {
+    if (!d.isOnline) {
+      const last = d.lastApplianceActiveAt && d.lastApplianceActiveAt > 0
+        ? `Last active ${formatRelativeTime(d.lastApplianceActiveAt)}`
+        : undefined;
+      return { primary: 'Inactive', secondary: last, tone: 'idle' };
+    }
+    if (d.applianceActiveNow) {
+      return { primary: 'Active now', tone: 'active' };
+    }
+    return { primary: 'Inactive', tone: 'idle' };
+  };
+
   const analytics = historyAnalytics;
 
   // Per-device chart data sorted by today's kWh
