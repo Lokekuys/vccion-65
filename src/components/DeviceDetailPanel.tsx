@@ -102,6 +102,7 @@ export function DeviceDetailPanel({
   onRemove,
   onScheduleChange,
   onControlModeChange,
+  onSmartModeChange,
 }: DeviceDetailPanelProps) {
   const [showToggleWarning, setShowToggleWarning] = React.useState(false);
   const [showWifiReset, setShowWifiReset] = React.useState(false);
