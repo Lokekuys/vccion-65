@@ -202,11 +202,21 @@ export function DeviceDetailPanel({
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Offline Banner */}
+          {/* Centered Offline State — replaces ugly overlay */}
           {isOffline && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-              <WifiOff className="w-4 h-4 shrink-0" />
-              <span>Device is offline</span>
+            <div className="flex flex-col items-center justify-center text-center gap-3 px-6 py-10 my-2 rounded-2xl border border-border/60 bg-muted/40 animate-fade-in">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-destructive/10 text-destructive">
+                <CloudOff className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold text-foreground">Device is Offline</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Live controls are temporarily unavailable. They will resume automatically when the plug reconnects.
+                </p>
+              </div>
+              {lastSeenText && (
+                <span className="text-[11px] text-muted-foreground font-mono">Last seen {lastSeenText}</span>
+              )}
             </div>
           )}
 
@@ -274,7 +284,26 @@ export function DeviceDetailPanel({
           {/* Smart Mode Settings (shown in smart mode) */}
           {controlMode === 'smart' && (
             <div className={cn("space-y-4", isOffline && "opacity-50 pointer-events-none")}>
-              <Label className="font-medium">Occupancy Automation</Label>
+              <div className="space-y-2">
+                <Label className="font-medium">Smart Automation Preset</Label>
+                <Select
+                  value={device.smartMode ?? 'occupancy'}
+                  onValueChange={(v) => onSmartModeChange?.(device.id, v as SmartMode)}
+                  disabled={isOffline}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a preset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SMART_MODES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {SMART_MODES.find((m) => m.value === (device.smartMode ?? 'occupancy'))?.description}
+                </p>
+              </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
                 <Label>Auto-Off on Vacancy</Label>
