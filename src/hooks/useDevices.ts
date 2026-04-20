@@ -117,8 +117,15 @@ export function useDevices() {
             (d.mode === 0 ? 'off' : d.mode === 1 ? 'manual' : d.mode === 2 ? 'smart' : d.mode === 3 ? 'scheduled' : 'manual'),
 
             sensorData: {
-              occupancy: sharedSensorRef.current?.occupancy ?? d.sensorData?.occupancy ?? "vacant",
-              lightLevel: sharedSensorRef.current?.lightLevel ?? d.sensorData?.lightLevel ?? 0,
+              // Sensor box state is independent from plug. If sensor box is offline,
+              // fall back to last device-stored values (or defaults), NOT to current
+              // sharedSensorRef which would be stale/unreachable.
+              occupancy: isSensorBoxOnline
+                ? (sharedSensorRef.current?.occupancy ?? d.sensorData?.occupancy ?? "vacant")
+                : (d.sensorData?.occupancy ?? "unknown"),
+              lightLevel: isSensorBoxOnline
+                ? (sharedSensorRef.current?.lightLevel ?? d.sensorData?.lightLevel ?? 0)
+                : (d.sensorData?.lightLevel ?? 0),
               lastUpdated: d.sensorData?.lastUpdated
                 ? new Date(d.sensorData.lastUpdated)
                 : new Date(),
