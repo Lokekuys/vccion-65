@@ -139,6 +139,9 @@ export function useAnalyticsLogs(
         daily,
         monthly,
         logs,
+        isOnline: meta.isOnline ?? false,
+        applianceActiveNow: meta.applianceActiveNow ?? false,
+        lastApplianceActiveAt: meta.lastApplianceActiveAt ?? 0,
       };
     });
 
