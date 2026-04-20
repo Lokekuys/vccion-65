@@ -16,8 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import type { AggregatedHistoryAnalytics } from '@/hooks/useAnalyticsLogs';
+import type { AggregatedHistoryAnalytics, DeviceHistoryAnalytics } from '@/hooks/useAnalyticsLogs';
 import { formatDuration } from '@/lib/analyticsAggregation';
+import { formatRelativeTime } from '@/lib/applianceActivity';
 
 interface PowerAnalyticsProps {
   historyAnalytics: AggregatedHistoryAnalytics | null;
