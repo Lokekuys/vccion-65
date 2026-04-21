@@ -113,6 +113,7 @@ export function useDevices() {
             id,
             name: safeName,
             isOn: d.relayState ?? d.isOn ?? false,
+            isLocked : d.isLocked ?? false,
             isOnline: true,
             controlMode:
             d.controlMode ??
@@ -454,6 +455,13 @@ export function useDevices() {
 
   /* ---------- WRITE TO FIREBASE ---------- */
 
+  const toggleDeviceLock = useCallback((deviceId: string, currentLockState: boolean) => {
+    update(ref(rtdb, `devices/${deviceId}`), {
+      isLocked: !currentLockState,
+      lastSeen: Date.now(),
+    });
+  }, []);
+
   const toggleDevice = useCallback(
     (deviceId: string) => {
       const device = devices?.find((d) => d.id === deviceId);
@@ -628,5 +636,6 @@ export function useDevices() {
     updateVecoRate,
     updateMonthlyBudget,
     refreshDevices,
+    toggleDeviceLock,
   };
 }

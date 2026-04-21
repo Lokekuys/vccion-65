@@ -60,6 +60,7 @@ export interface SmartPlug {
   location: string;
   isOnline: boolean;
   isOn: boolean;
+  isLocked?: boolean;
   type?: string;
   isClaimed?: boolean;
   isRegistered?: boolean;

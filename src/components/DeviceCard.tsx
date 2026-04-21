@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { 
   Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, 
-  Pencil, Hand, Calendar, Brain, Zap, SignalZero 
+  Pencil, Hand, Calendar, Brain, Zap, SignalZero, Lock // <--- Added Lock here
 } from 'lucide-react';
 
 // UI Components & Hooks
-import { toast } from '@/hooks/use-toast';
+import { useAdmin } from '@/hooks/useAdmin'; // <--- Added useAdmin here
+import { toast } from 'sonner'; // <--- FIXED: using sonner for toast notifications
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,9 @@ export function DeviceCard({
   countdownEndsAt, 
   isSensorBoxOnline = true 
 }: DeviceCardProps) {
+  // NEW: Fetch admin status for the current user
+  const { isAdmin } = useAdmin();
+
   const [isHovered, setIsHovered] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editName, setEditName] = useState(device.name);
@@ -70,13 +74,15 @@ export function DeviceCard({
   const isDeviceOnline = connectionStatus === 'connected';
   const effectiveIsOn = isDeviceOnline ? device.isOn : false;
 
+  // NEW: Define if the user is locked out from controlling this device
+  const isUserLockedOut = device.isLocked && !isAdmin;
+
   const handleToggle = () => {
+    // NEW: Stop execution if they are locked out (just in case)
+    if (isUserLockedOut) return;
+
     if (connectionStatus === 'offline') {
-      toast({
-        title: 'Device offline',
-        description: 'Cannot control device while offline',
-        variant: 'destructive',
-      });
+      toast.error('Cannot control device while offline');
       return;
     }
     if (device.controlMode === 'smart' || device.controlMode === 'scheduled') {
@@ -93,6 +99,8 @@ export function DeviceCard({
 
   const handleOpenEditDialog = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // NEW: Prevent opening the edit dialog if locked out
+    if (isUserLockedOut) return; 
     setEditName(device.name);
     setEditLocation(device.location);
     setShowEditDialog(true);
@@ -112,11 +120,19 @@ export function DeviceCard({
   return (
     <Card
       className={cn(
-        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all'
+        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all',
+        isUserLockedOut && 'opacity-90' 
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onSelect(device)}
+      onClick={() => {
+        // NEW: Show a popup toast if a locked-out user clicks the card
+        if (isUserLockedOut) {
+          toast.error('🔒 Locked by Admin: You do not have permission to configure this device.');
+          return;
+        }
+        onSelect(device);
+      }}
     >
       <CardContent className="p-0">
         {/* Header */}
@@ -131,9 +147,26 @@ export function DeviceCard({
             <div>
               <div className="flex items-center gap-1">
                 <h3 className="font-semibold text-foreground">{device.name}</h3>
-                <button onClick={handleOpenEditDialog} className="text-muted-foreground hover:text-foreground">
-                  <Pencil className="w-3 h-3" />
-                </button>
+                
+                {/* NEW: Show red lock icon next to the name if locked */}
+                {device.isLocked && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Lock className="w-3 h-3 text-destructive ml-1" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Locked by Admin</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+                {!isUserLockedOut && (
+                  <button onClick={handleOpenEditDialog} className="text-muted-foreground hover:text-foreground ml-1">
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">{device.location}</p>
             </div>
@@ -188,12 +221,12 @@ export function DeviceCard({
             <LightLevelDisplay lux={sensorData.lightLevel} compact />
           </div>
           {!isSensorBoxOnline && (
-  <div className="absolute inset-0 flex items-center justify-center">
-    <div className="px-4 py-1.5 rounded-md bg-card/95 border border-red-500/30 shadow-sm text-[11px] font-medium text-red-500">
-      Sensor Box Disconnected
-    </div>
-  </div>
-)}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="px-4 py-1.5 rounded-md bg-card/95 border border-red-500/30 shadow-sm text-[11px] font-medium text-red-500">
+                Sensor Box Disconnected
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Live Wattage Reading */}
@@ -239,16 +272,34 @@ export function DeviceCard({
         <div className="mt-2"><ScheduleCountdown device={device} /></div>
 
         {/* Footer Controls */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+        <div className="relative flex items-center justify-between mt-4 pt-4 border-t">
+          
+          {/* NEW: Invisible overlay that catches clicks on the disabled footer */}
+          {isUserLockedOut && (
+            <div 
+              className="absolute inset-0 z-10 cursor-not-allowed" 
+              onClick={(e) => {
+                e.stopPropagation();
+                toast.error("🔒 Locked by Admin: You do not have permission to control this device.");
+              }}
+            />
+          )}
+
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Switch
               checked={effectiveIsOn}
               onCheckedChange={handleToggle}
-              disabled={connectionStatus === 'offline'}
+              // NEW: Disable switch if offline OR if the user is locked out
+              disabled={connectionStatus === 'offline' || isUserLockedOut} 
             />
             <span className="text-sm text-muted-foreground">{effectiveIsOn ? 'On' : 'Off'}</span>
           </div>
-          <Button variant="ghost" size="sm" className={cn('transition-transform', isHovered && 'translate-x-1')}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className={cn('transition-transform', isHovered && !isUserLockedOut && 'translate-x-1')}
+            disabled={isUserLockedOut} // NEW: Disable Details button if locked out
+          >
             <Settings className="w-4 h-4 mr-1" /> Details <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>

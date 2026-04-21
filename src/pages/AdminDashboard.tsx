@@ -15,6 +15,8 @@ import {
   ToggleRight,
   Trash2,
   Settings,
+  Lock, // <--- Added Lock
+  Unlock, // <--- Added Unlock
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +53,7 @@ const AdminDashboard = () => {
     removeDevice,
     updateVecoRate,
     setControlMode,
+    toggleDeviceLock, // <--- Added toggleDeviceLock from your hook
   } = useDevices();
 
   const [newVecoRate, setNewVecoRate] = useState<string>(vecoRate.toString());
@@ -81,6 +84,18 @@ const AdminDashboard = () => {
     removeDevice(deviceId);
     logActivity("Admin device removed", `Removed ${deviceName}`);
     toast.success(`Removed ${deviceName}`);
+  };
+
+  // NEW: Handler for the Lock Button
+  const handleToggleLock = async (deviceId: string, currentLockState: boolean, deviceName: string) => {
+    try {
+      await toggleDeviceLock(deviceId, currentLockState);
+      const actionStr = !currentLockState ? "Locked" : "Unlocked";
+      logActivity(`Admin device ${actionStr.toLowerCase()}`, `${actionStr} ${deviceName}`);
+      toast.success(`${actionStr} ${deviceName}`);
+    } catch (error) {
+      toast.error("Failed to update device lock status");
+    }
   };
 
   const handleRoleChange = (uid: string, email: string, newRole: "admin" | "member") => {
@@ -131,33 +146,6 @@ const AdminDashboard = () => {
               <div>
                 <span className="data-label">Members</span>
                 <div className="font-bold text-foreground">{members.length}</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Plug className="w-5 h-5 text-primary" />
-              <div>
-                <span className="data-label">Devices</span>
-                <div className="font-bold text-foreground">{activeDevices}/{totalDevices}</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Zap className="w-5 h-5 text-energy" />
-              <div>
-                <span className="data-label">Today</span>
-                <div className="font-bold font-mono text-foreground">{totalTodayKwh.toFixed(2)} kWh</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <DollarSign className="w-5 h-5 text-warning" />
-              <div>
-                <span className="data-label">Weekly Cost</span>
-                <div className="font-bold font-mono text-foreground">₱{(totalWeeklyKwh * vecoRate).toFixed(2)}</div>
               </div>
             </CardContent>
           </Card>
@@ -253,13 +241,13 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Device Override Control</CardTitle>
-                <CardDescription>Force-toggle or remove any device</CardDescription>
+                <CardDescription>Force-toggle, lock, or remove any device</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {devices?.map((d) => (
                   <div
                     key={d.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                    className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 flex-wrap gap-2"
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -275,6 +263,26 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      
+                      {/* NEW: Lock Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={
+                          d.isLocked
+                            ? "text-destructive border-destructive bg-destructive/10 w-[100px]"
+                            : "text-muted-foreground w-[100px]"
+                        }
+                        onClick={() => handleToggleLock(d.id, !!d.isLocked, d.name)}
+                      >
+                        {d.isLocked ? (
+                          <><Lock className="w-4 h-4 mr-1.5" /> Locked</>
+                        ) : (
+                          <><Unlock className="w-4 h-4 mr-1.5" /> Unlocked</>
+                        )}
+                      </Button>
+
+                      {/* Power Toggle Button */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -287,6 +295,7 @@ const AdminDashboard = () => {
                         )}
                         {d.isOn ? "Turn Off" : "Turn On"}
                       </Button>
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="icon" className="text-destructive">
@@ -340,35 +349,6 @@ const AdminDashboard = () => {
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Current rate: <span className="font-mono font-medium text-foreground">₱{vecoRate.toFixed(2)}/kWh</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Usage Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg border bg-muted/30">
-                    <span className="data-label">Today's Usage</span>
-                    <div className="font-bold font-mono text-foreground">{totalTodayKwh.toFixed(2)} kWh</div>
-                    <div className="text-xs text-muted-foreground">₱{(totalTodayKwh * vecoRate).toFixed(2)}</div>
-                  </div>
-                  <div className="p-3 rounded-lg border bg-muted/30">
-                    <span className="data-label">This Week</span>
-                    <div className="font-bold font-mono text-foreground">{totalWeeklyKwh.toFixed(2)} kWh</div>
-                    <div className="text-xs text-muted-foreground">₱{(totalWeeklyKwh * vecoRate).toFixed(2)}</div>
-                  </div>
-                  <div className="p-3 rounded-lg border bg-muted/30 col-span-2">
-                    <span className="data-label">Estimated Monthly</span>
-                    <div className="font-bold font-mono text-foreground">
-                      {(totalTodayKwh * 30).toFixed(1)} kWh
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      ₱{(totalTodayKwh * 30 * vecoRate).toFixed(2)}
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
