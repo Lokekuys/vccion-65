@@ -204,23 +204,8 @@ export function DeviceDetailPanel({
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Centered Offline State — replaces ugly overlay */}
-          {isOffline && (
-            <div className="flex flex-col items-center justify-center text-center gap-3 px-6 py-10 my-2 rounded-2xl border border-border/60 bg-muted/40 animate-fade-in">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-destructive/10 text-destructive">
-                <CloudOff className="w-7 h-7" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-foreground">Device is Offline</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Live controls are temporarily unavailable. They will resume automatically when the plug reconnects.
-                </p>
-              </div>
-              {lastSeenText && (
-                <span className="text-[11px] text-muted-foreground font-mono">Last seen {lastSeenText}</span>
-              )}
-            </div>
-          )}
+          {/* Offline state is already shown by the top-right status indicator —
+              no redundant centered block here. Controls are simply disabled. */}
 
           {/* Power Control */}
           <div className={cn("flex items-center justify-between p-4 rounded-xl bg-muted", isOffline && "opacity-50")}>
