@@ -12,7 +12,7 @@ import {
   Zap,
   RotateCcw,
   Loader2,
-  CloudOff,
+  SignalZero,
 } from "lucide-react";
 import { ref, set } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
@@ -77,6 +77,7 @@ interface DeviceDetailPanelProps {
   onScheduleChange: (deviceId: string, schedule: ScheduleEntry) => void;
   onControlModeChange: (deviceId: string, mode: ControlMode) => void;
   onSmartModeChange?: (deviceId: string, mode: SmartMode) => void;
+  isSensorBoxOnline?: boolean;
 }
 
 const CONTROL_MODES: { value: ControlMode; label: string; icon: typeof Hand; description: string }[] = [
@@ -103,6 +104,7 @@ export function DeviceDetailPanel({
   onScheduleChange,
   onControlModeChange,
   onSmartModeChange,
+  isSensorBoxOnline = true,
 }: DeviceDetailPanelProps) {
   const [showToggleWarning, setShowToggleWarning] = React.useState(false);
   const [showWifiReset, setShowWifiReset] = React.useState(false);
