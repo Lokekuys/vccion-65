@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import type { AggregatedHistoryAnalytics, DeviceHistoryAnalytics } from '@/hooks/useAnalyticsLogs';
 import { formatDuration } from '@/lib/analyticsAggregation';
 import { formatRelativeTime } from '@/lib/applianceActivity';
+import { formatEnergy } from '@/lib/energyFormat';
 import { cn } from '@/lib/utils';
 
 interface PowerAnalyticsProps {
@@ -338,7 +339,7 @@ export function PowerAnalytics({
                           </span>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-mono text-foreground whitespace-nowrap">{d.todayKwh.toFixed(3)} kWh</div>
+                          <div className="font-mono text-foreground whitespace-nowrap">{formatEnergy(d.todayKwh)}</div>
                           <div className="text-muted-foreground whitespace-nowrap">₱{d.todayCost.toFixed(2)}</div>
                         </div>
                       </div>
@@ -434,7 +435,7 @@ export function PowerAnalytics({
                           </span>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-mono text-foreground whitespace-nowrap">{d.monthKwh.toFixed(2)} kWh</div>
+                          <div className="font-mono text-foreground whitespace-nowrap">{formatEnergy(d.monthKwh)}</div>
                           <div className="text-muted-foreground whitespace-nowrap">₱{d.monthCost.toFixed(2)}</div>
                         </div>
                       </div>

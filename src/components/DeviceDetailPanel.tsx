@@ -12,7 +12,7 @@ import {
   Zap,
   RotateCcw,
   Loader2,
-  CloudOff,
+  SignalZero,
 } from "lucide-react";
 import { ref, set } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
@@ -77,6 +77,7 @@ interface DeviceDetailPanelProps {
   onScheduleChange: (deviceId: string, schedule: ScheduleEntry) => void;
   onControlModeChange: (deviceId: string, mode: ControlMode) => void;
   onSmartModeChange?: (deviceId: string, mode: SmartMode) => void;
+  isSensorBoxOnline?: boolean;
 }
 
 const CONTROL_MODES: { value: ControlMode; label: string; icon: typeof Hand; description: string }[] = [
@@ -103,6 +104,7 @@ export function DeviceDetailPanel({
   onScheduleChange,
   onControlModeChange,
   onSmartModeChange,
+  isSensorBoxOnline = true,
 }: DeviceDetailPanelProps) {
   const [showToggleWarning, setShowToggleWarning] = React.useState(false);
   const [showWifiReset, setShowWifiReset] = React.useState(false);
@@ -202,23 +204,8 @@ export function DeviceDetailPanel({
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Centered Offline State — replaces ugly overlay */}
-          {isOffline && (
-            <div className="flex flex-col items-center justify-center text-center gap-3 px-6 py-10 my-2 rounded-2xl border border-border/60 bg-muted/40 animate-fade-in">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-destructive/10 text-destructive">
-                <CloudOff className="w-7 h-7" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-foreground">Device is Offline</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Live controls are temporarily unavailable. They will resume automatically when the plug reconnects.
-                </p>
-              </div>
-              {lastSeenText && (
-                <span className="text-[11px] text-muted-foreground font-mono">Last seen {lastSeenText}</span>
-              )}
-            </div>
-          )}
+          {/* Offline state is already shown by the top-right status indicator —
+              no redundant centered block here. Controls are simply disabled. */}
 
           {/* Power Control */}
           <div className={cn("flex items-center justify-between p-4 rounded-xl bg-muted", isOffline && "opacity-50")}>
@@ -247,17 +234,20 @@ export function DeviceDetailPanel({
               {CONTROL_MODES.map((mode) => {
                 const Icon = mode.icon;
                 const isActive = controlMode === mode.value;
+                const isSmartDisabled = mode.value === 'smart' && !isSensorBoxOnline;
+                const isDisabled = isOffline || isSmartDisabled;
                 return (
                   <button
                     key={mode.value}
                     onClick={() => onControlModeChange(device.id, mode.value)}
-                    disabled={isOffline}
+                    disabled={isDisabled}
+                    title={isSmartDisabled ? 'Sensor box required for automation' : undefined}
                     className={cn(
                       "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center",
                       isActive
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-transparent bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
-                      isOffline && "cursor-not-allowed"
+                      isDisabled && "cursor-not-allowed opacity-50 hover:bg-muted hover:text-muted-foreground"
                     )}
                   >
                     <Icon className="w-5 h-5" />
@@ -269,6 +259,12 @@ export function DeviceDetailPanel({
             <p className="text-xs text-muted-foreground">
               {CONTROL_MODES.find((m) => m.value === controlMode)?.description}
             </p>
+            {!isSensorBoxOnline && (
+              <p className="text-[11px] text-warning flex items-center gap-1">
+                <SignalZero className="w-3 h-3" />
+                Smart mode unavailable — sensor box required for automation.
+              </p>
+            )}
           </div>
 
           {/* Schedule Editor (shown in scheduled mode) */}
@@ -283,7 +279,7 @@ export function DeviceDetailPanel({
 
           {/* Smart Mode Settings (shown in smart mode) */}
           {controlMode === 'smart' && (
-            <div className={cn("space-y-4", isOffline && "opacity-50 pointer-events-none")}>
+            <div className={cn("space-y-4", (isOffline || !isSensorBoxOnline) && "opacity-50 pointer-events-none")}>
               <div className="space-y-2">
                 <Label className="font-medium">Smart Automation Preset</Label>
                 <Select
@@ -401,8 +397,23 @@ export function DeviceDetailPanel({
 
           {/* Sensor Readings — sensor box state is independent from plug */}
           <div className="space-y-3">
-            <OccupancyDisplay status={sensorData.occupancy} />
-            <LightLevelDisplay lux={sensorData.lightLevel} />
+            <div className="relative">
+              <div className={cn(
+                'space-y-3 transition-opacity',
+                !isSensorBoxOnline && 'opacity-40 blur-[1px] pointer-events-none select-none'
+              )}>
+                <OccupancyDisplay status={sensorData.occupancy} />
+                <LightLevelDisplay lux={sensorData.lightLevel} />
+              </div>
+              {!isSensorBoxOnline && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/95 border border-border shadow-sm text-xs font-medium text-foreground">
+                    <SignalZero className="w-3.5 h-3.5 text-warning" />
+                    Sensor box disconnected
+                  </div>
+                </div>
+              )}
+            </div>
             <ApplianceActivityDisplay
               applianceActiveNow={isOffline ? false : device.applianceActiveNow}
               lastApplianceActiveAt={device.lastApplianceActiveAt}
