@@ -33,6 +33,7 @@ const Index = () => {
     monthlyBudget,
     historyAnalytics,
     systemStatus,
+    isSensorBoxOnline,
     toggleDevice,
     setBrightness,
     updateAutomation,
@@ -187,6 +188,7 @@ const Index = () => {
         onToggle={toggleDevice}
         onSelect={handleSelectDevice}
         countdownEndsAt={countdowns[device.id]}
+        isSensorBoxOnline={isSensorBoxOnline}
       />
     ))
   )}
@@ -209,6 +211,7 @@ const Index = () => {
           onScheduleChange={updateSchedule}
           onControlModeChange={setControlMode}
           onSmartModeChange={setSmartMode}
+          isSensorBoxOnline={isSensorBoxOnline}
         />
       )}
     </div>
