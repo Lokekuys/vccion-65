@@ -176,9 +176,9 @@ export function DeviceDetailPanel({
         <SheetHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={cn("flex items-center justify-center w-12 h-12 rounded-xl", device.isOn ? "bg-energy/10" : "bg-muted")}>
-                <PowerIndicator isOn={device.isOn} size="lg" />
-              </div>
+              <div className={cn("flex items-center justify-center w-12 h-12 rounded-xl", effectiveIsOn ? "bg-energy/10" : "bg-muted")}>
+  <PowerIndicator isOn={effectiveIsOn} size="lg" />
+</div>
               <div>
                 <SheetTitle className="text-left">{device.name}</SheetTitle>
                 <SheetDescription className="text-left">{device.location}</SheetDescription>
@@ -209,21 +209,21 @@ export function DeviceDetailPanel({
 
           {/* Power Control */}
           <div className={cn("flex items-center justify-between p-4 rounded-xl bg-muted", isOffline && "opacity-50")}>
-            <div className="flex items-center gap-3">
-              <Power className="w-5 h-5 text-primary" />
-              <div>
-                <Label className="text-base font-medium">Power</Label>
-                <p className="text-sm text-muted-foreground">
-                  {device.isOn ? "Device is on" : "Device is off"}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={device.isOn}
-              onCheckedChange={handleToggle}
-              disabled={isOffline}
-            />
-          </div>
+  <div className="flex items-center gap-3">
+    <Power className="w-5 h-5 text-primary" />
+    <div>
+      <Label className="text-base font-medium">Power</Label>
+      <p className="text-sm text-muted-foreground">
+        {effectiveIsOn ? "Device is on" : "Device is off"}
+      </p>
+    </div>
+  </div>
+  <Switch
+    checked={effectiveIsOn}
+    onCheckedChange={handleToggle}
+    disabled={isOffline}
+  />
+</div>
 
           <Separator />
 
@@ -384,19 +384,10 @@ export function DeviceDetailPanel({
 
           <Separator />
 
-          {/* Live Wattage — forced to 0 W when offline */}
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-            <Zap className="w-4 h-4 text-sensor-power" />
-            <span className="text-sm font-medium text-foreground">
-              {(isOffline ? 0 : powerData.currentWatts).toFixed(1)} W
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {isOffline ? 'Offline' : 'Live'}
-            </span>
-          </div>
-
-          {/* Sensor Readings — sensor box state is independent from plug */}
+          {/* Sensor Readings & Power Block */}
           <div className="space-y-3">
+            
+            {/* 1. Sensor Readings */}
             <div className="relative">
               <div className={cn(
                 'space-y-3 transition-opacity',
@@ -405,21 +396,36 @@ export function DeviceDetailPanel({
                 <OccupancyDisplay status={sensorData.occupancy} />
                 <LightLevelDisplay lux={sensorData.lightLevel} />
               </div>
+              
+              {/* Fixed Symmetrical Overlay */}
               {!isSensorBoxOnline && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/95 border border-border shadow-sm text-xs font-medium text-foreground">
-                    <SignalZero className="w-3.5 h-3.5 text-warning" />
-                    Sensor box disconnected
+                  <div className="px-4 py-1.5 rounded-md bg-card/95 border border-red-500/30 shadow-sm text-[11px] font-medium text-red-500">
+                    Sensor Box Disconnected
                   </div>
                 </div>
               )}
             </div>
+
+            {/* 2. Live Wattage (Moved below sensors, above appliance usage) */}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+              <Zap className="w-4 h-4 text-sensor-power" />
+              <span className="text-sm font-medium text-foreground">
+                {(isOffline ? 0 : powerData.currentWatts).toFixed(1)} W
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {isOffline ? 'Offline' : 'Live'}
+              </span>
+            </div>
+
+            {/* 3. Appliance Usage */}
             <ApplianceActivityDisplay
               applianceActiveNow={isOffline ? false : device.applianceActiveNow}
               lastApplianceActiveAt={device.lastApplianceActiveAt}
               lastApplianceActiveReadable={device.lastApplianceActiveReadable}
               forceInactive={isOffline}
             />
+            
           </div>
 
           <Separator />

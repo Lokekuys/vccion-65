@@ -1,46 +1,40 @@
 import { useState, useEffect } from 'react';
-import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain, Zap, SignalZero } from 'lucide-react';
+import { 
+  Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, 
+  Pencil, Hand, Calendar, Brain, Zap, SignalZero 
+} from 'lucide-react';
+
+// UI Components & Hooks
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { SmartPlug } from '@/types/device';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { StatusIndicator } from './StatusIndicator';
-import { PowerIndicator } from './PowerIndicator';
-import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from '@/lib/deviceStatus';
-import {
-  OccupancyDisplay,
-  LightLevelDisplay,
-  ApplianceActivityDisplay,
-} from './SensorDisplay';
 import { Badge } from '@/components/ui/badge';
-import { CountdownTimer } from './CountdownTimer';
-import { ScheduleCountdown } from './ScheduleCountdown';
-import { ref, update } from 'firebase/database';
-import { rtdb } from '@/lib/firebase';
-import { getScheduleStatus, getScheduleLabel } from '@/lib/scheduleUtils';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from '@/components/ui/dialog';
+
+// Firebase & Libs
+import { ref, update } from 'firebase/database';
+import { rtdb } from '@/lib/firebase';
+import { computeConnectionStatus, formatLastSeen, STATUS_CONFIG } from '@/lib/deviceStatus';
+import { getScheduleStatus, getScheduleLabel } from '@/lib/scheduleUtils';
+
+// Types & Custom Components
+import { SmartPlug } from '@/types/device';
+import { StatusIndicator } from './StatusIndicator';
+import { PowerIndicator } from './PowerIndicator';
+import { OccupancyDisplay, LightLevelDisplay, ApplianceActivityDisplay } from './SensorDisplay';
+import { CountdownTimer } from './CountdownTimer';
+import { ScheduleCountdown } from './ScheduleCountdown';
 
 interface DeviceCardProps {
   device: SmartPlug;
@@ -50,7 +44,13 @@ interface DeviceCardProps {
   isSensorBoxOnline?: boolean;
 }
 
-export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSensorBoxOnline = true }: DeviceCardProps) {
+export function DeviceCard({ 
+  device, 
+  onToggle, 
+  onSelect, 
+  countdownEndsAt, 
+  isSensorBoxOnline = true 
+}: DeviceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editName, setEditName] = useState(device.name);
@@ -72,7 +72,11 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
 
   const handleToggle = () => {
     if (connectionStatus === 'offline') {
-      toast({ title: 'Device offline', description: 'Cannot control device while offline', variant: 'destructive' });
+      toast({
+        title: 'Device offline',
+        description: 'Cannot control device while offline',
+        variant: 'destructive',
+      });
       return;
     }
     if (device.controlMode === 'smart' || device.controlMode === 'scheduled') {
@@ -84,10 +88,6 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
 
   const sensorData = device.sensorData ?? { occupancy: 'vacant', lightLevel: 0 };
   const powerData = device.powerData ?? { currentWatts: 0, isAbnormal: false };
-  console.log("Device Power:", device.name, powerData.currentWatts);
-  const automationSettings = device.automationSettings ?? { occupancyControlEnabled: false };
-  const override = device.override ?? { active: false, permanent: false };
-
   const scheduleStatus = getScheduleStatus(device);
   const scheduleLabel = getScheduleLabel(scheduleStatus);
 
@@ -102,6 +102,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
     const updates: Record<string, string> = {};
     if (editName.trim() && editName !== device.name) updates.name = editName.trim();
     if (editLocation.trim() && editLocation !== device.location) updates.location = editLocation.trim();
+
     if (Object.keys(updates).length > 0) {
       await update(ref(rtdb, `devices/${device.id}`), updates);
     }
@@ -121,7 +122,10 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className={cn('flex items-center justify-center w-10 h-10 rounded-lg transition-colors', effectiveIsOn ? 'bg-energy/10' : 'bg-muted')}>
+            <div className={cn(
+              'flex items-center justify-center w-10 h-10 rounded-lg transition-colors', 
+              effectiveIsOn ? 'bg-energy/10' : 'bg-muted'
+            )}>
               <PowerIndicator isOn={effectiveIsOn} size="lg" />
             </div>
             <div>
@@ -147,23 +151,18 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
                 pulse={connectionStatus === 'connected'}
               />
             </div>
-            {connectionStatus === 'offline' && (
-              <Badge variant="outline" className="border-destructive/40 text-destructive gap-1 text-[10px] px-1.5 py-0">
-                <WifiOff className="w-2.5 h-2.5" />
-                Device is Offline
-              </Badge>
-            )}
             {connectionStatus !== 'connected' && connectionStatus !== 'offline' && lastSeenText && (
-              <span className="text-[10px] text-muted-foreground font-mono">
-                {lastSeenText}
-              </span>
+              <span className="text-[10px] text-muted-foreground font-mono">{lastSeenText}</span>
             )}
           </div>
         </div>
 
         {/* Control Mode Badge */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Badge className={cn('automation-badge', device.controlMode === 'smart' ? 'active' : device.controlMode === 'scheduled' ? 'active' : 'inactive')}>
+          <Badge className={cn(
+            'automation-badge', 
+            (device.controlMode === 'smart' || device.controlMode === 'scheduled') ? 'active' : 'inactive'
+          )}>
             {device.controlMode === 'manual' && <><Hand className="w-3 h-3" /> Manual</>}
             {device.controlMode === 'scheduled' && <><Calendar className="w-3 h-3" /> Scheduled</>}
             {device.controlMode === 'smart' && <><Brain className="w-3 h-3" /> Smart</>}
@@ -179,7 +178,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
           )}
         </div>
 
-        {/* Sensor Readings — localized "sensor box disconnected" overlay */}
+        {/* Sensor Readings */}
         <div className="relative mb-4">
           <div className={cn(
             'grid grid-cols-2 gap-2 transition-opacity',
@@ -189,16 +188,15 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
             <LightLevelDisplay lux={sensorData.lightLevel} compact />
           </div>
           {!isSensorBoxOnline && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-card/95 border border-border shadow-sm text-[11px] font-medium text-muted-foreground">
-                <SignalZero className="w-3 h-3 text-warning" />
-                Sensor box disconnected
-              </div>
-            </div>
-          )}
+  <div className="absolute inset-0 flex items-center justify-center">
+    <div className="px-4 py-1.5 rounded-md bg-card/95 border border-red-500/30 shadow-sm text-[11px] font-medium text-red-500">
+      Sensor Box Disconnected
+    </div>
+  </div>
+)}
         </div>
 
-        {/* Live Wattage Reading — forced to 0 W when offline */}
+        {/* Live Wattage Reading */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -213,9 +211,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{connectionStatus === 'offline'
-                ? 'Live readings paused while the plug is offline.'
-                : 'Automatically read from the device (no manual input needed).'}</p>
+              <p>{connectionStatus === 'offline' ? 'Live readings paused while the plug is offline.' : 'Automatically read from the device.'}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -234,7 +230,7 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Detected when the connected appliance draws ≥ 2.5W. Idle plug power (1.0–1.9W) is ignored.</p>
+              <p>Detected when the appliance is plugged in and drawing power.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -252,15 +248,11 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
             />
             <span className="text-sm text-muted-foreground">{effectiveIsOn ? 'On' : 'Off'}</span>
           </div>
-
           <Button variant="ghost" size="sm" className={cn('transition-transform', isHovered && 'translate-x-1')}>
-            <Settings className="w-4 h-4 mr-1" />
-            Details
-            <ChevronRight className="w-4 h-4 ml-1" />
+            <Settings className="w-4 h-4 mr-1" /> Details <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
       </CardContent>
-
 
       {/* Toggle Warning Dialog */}
       <AlertDialog open={showToggleWarning} onOpenChange={setShowToggleWarning}>
@@ -268,9 +260,9 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
           <AlertDialogHeader>
             <AlertDialogTitle>Override {device.controlMode === 'smart' ? 'Smart' : 'Scheduled'} Mode?</AlertDialogTitle>
             <AlertDialogDescription>
-              {device.controlMode === 'smart'
-                ? 'This device is currently in Smart Mode. Toggling it manually will override the occupancy automation. Do you want to continue?'
-                : 'This device is currently in Scheduled Mode. Toggling it manually will switch it to Manual Mode. Do you want to continue?'}
+              {device.controlMode === 'smart' 
+                ? 'This device is in Smart Mode. Manual toggle will override occupancy automation. Continue?' 
+                : 'This device is in Scheduled Mode. Manual toggle will switch it to Manual Mode. Continue?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -290,21 +282,11 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSens
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="device-name">Name</Label>
-              <Input
-                id="device-name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Device name"
-              />
+              <Input id="device-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="device-location">Description</Label>
-              <Input
-                id="device-location"
-                value={editLocation}
-                onChange={(e) => setEditLocation(e.target.value)}
-                placeholder="Device location"
-              />
+              <Input id="device-location" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
             </div>
           </div>
           <DialogFooter>

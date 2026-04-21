@@ -118,19 +118,9 @@ export function PowerDisplay({ watts, isAbnormal = false, compact = false }: Pow
 
 interface ApplianceActivityDisplayProps extends ApplianceActivityFields {
   compact?: boolean;
-  /**
-   * When true, the display reports the appliance as INACTIVE regardless of
-   * applianceActiveNow. This is used to reflect a stale/offline plug
-   * without mutating any persisted Firebase data.
-   * The historical "Last active X ago" timestamp is still shown.
-   */
   forceInactive?: boolean;
 }
 
-/**
- * Shows appliance usage status using firmware-provided fields.
- * Auto-refreshes every 30s so relative time strings stay current.
- */
 export function ApplianceActivityDisplay({
   applianceActiveNow,
   lastApplianceActiveAt,
@@ -151,8 +141,6 @@ export function ApplianceActivityDisplay({
     lastApplianceActiveReadable,
   });
 
-  // When forced inactive (e.g. plug offline) override the primary label to
-  // "Inactive" but keep the historical "Last active X ago" as secondary text.
   const isActive = computed.isActive;
   const primaryLabel = forceInactive ? 'Inactive' : computed.label;
   const secondaryLabel =
@@ -178,26 +166,31 @@ export function ApplianceActivityDisplay({
       </div>
       <div className="flex flex-col min-w-0">
         <span className="data-label">Appliance Usage</span>
-        <span
-          className={cn(
-            'font-medium truncate',
-            compact ? 'text-sm' : 'text-base',
-            isActive ? 'text-energy' : 'text-muted-foreground'
-          )}
-        >
-          {primaryLabel}
-        </span>
-        {secondaryLabel && (
-          <span className="text-[11px] text-muted-foreground truncate">
-            {secondaryLabel}
+        
+        {/* Changed this section to a flex-row to put the timer beside the status */}
+        <div className="flex items-center gap-1.5 truncate">
+          <span
+            className={cn(
+              'font-medium shrink-0',
+              compact ? 'text-sm' : 'text-base',
+              isActive ? 'text-energy' : 'text-muted-foreground'
+            )}
+          >
+            {primaryLabel}
           </span>
-        )}
+          {secondaryLabel && (
+            <>
+              <span className="text-muted-foreground text-[10px]">•</span>
+              <span className="text-[11px] text-muted-foreground truncate mt-[2px]">
+                {secondaryLabel}
+              </span>
+            </>
+          )}
+        </div>
+
       </div>
     </div>
   );
 }
 
-// Backwards-compat re-export so existing imports keep working.
-// (Old OnDurationDisplay has been replaced by ApplianceActivityDisplay.)
 export { formatRelativeTime };
-
