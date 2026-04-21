@@ -56,19 +56,15 @@ export function useDevices() {
   }, []);
 
   // Listen to shared sensor box (OccupancyPlug/sensorBox)
-  // IMPORTANT: sensor box state is INDEPENDENT from plug state.
-  // We only zero out sensor values if the sensor box itself stops reporting.
   useEffect(() => {
     const sensorRef = ref(rtdb, "OccupancyPlug/sensorBox");
     const unsubscribe = onValue(sensorRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        const lastSeenMs =
-          typeof data.lastSeen === "number"
-            ? data.lastSeen
-            : typeof data.lastUpdated === "number"
-            ? data.lastUpdated
-            : Date.now();
+        
+        // Use current time if the ESP doesn't send a valid epoch timestamp
+        const lastSeenMs = Date.now();
+          
         const parsed = {
           occupancy: data.presence?.detected === true ? "occupied" : "vacant",
           lightLevel: data.lux ?? 0,
@@ -81,17 +77,14 @@ export function useDevices() {
     return () => unsubscribe();
   }, []);
 
-  // Tick every 10s so derived "sensor box online" recomputes even without new RTDB events
   const [, setSensorTick] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setSensorTick((t) => t + 1), 10_000);
     return () => clearInterval(i);
   }, []);
 
-  // Sensor box is considered online if it reported within last 60s
-  const SENSOR_BOX_TIMEOUT_MS = 60_000;
-  const isSensorBoxOnline =
-    !!sharedSensorData && Date.now() - sharedSensorData.lastSeenMs < SENSOR_BOX_TIMEOUT_MS;
+  // Simplified online check: If we have data in memory, it's online.
+  const isSensorBoxOnline = !!sharedSensorData;
 
   /* ---------- READ FROM FIREBASE ---------- */
   useEffect(() => {
@@ -113,7 +106,7 @@ export function useDevices() {
             id,
             name: safeName,
             isOn: d.relayState ?? d.isOn ?? false,
-            isLocked : d.isLocked ?? false,
+            isLocked: d.isLocked ?? false,
             isOnline: true,
             controlMode:
             d.controlMode ??
@@ -121,18 +114,10 @@ export function useDevices() {
             smartMode: (d.smartMode as SmartMode) ?? 'occupancy',
 
             sensorData: {
-              // Sensor box state is independent from plug. If sensor box is offline,
-              // fall back to last device-stored values (or defaults), NOT to current
-              // sharedSensorRef which would be stale/unreachable.
-              occupancy: isSensorBoxOnline
-                ? (sharedSensorRef.current?.occupancy ?? d.sensorData?.occupancy ?? "vacant")
-                : (d.sensorData?.occupancy ?? "unknown"),
-              lightLevel: isSensorBoxOnline
-                ? (sharedSensorRef.current?.lightLevel ?? d.sensorData?.lightLevel ?? 0)
-                : (d.sensorData?.lightLevel ?? 0),
-              lastUpdated: d.sensorData?.lastUpdated
-                ? new Date(d.sensorData.lastUpdated)
-                : new Date(),
+              // ALWAYS use the shared sensor box data as the source of truth.
+              occupancy: sharedSensorRef.current?.occupancy ?? "unknown",
+              lightLevel: sharedSensorRef.current?.lightLevel ?? 0,
+              lastUpdated: new Date(),
             },
 
             powerData: {
@@ -195,7 +180,6 @@ export function useDevices() {
   }, []);
 
   // Re-merge sensor data into devices when sharedSensorData changes.
-  // Only apply live values when the sensor box itself is currently online.
   useEffect(() => {
     if (!sharedSensorData || !isSensorBoxOnline) return;
     setDevices((prev) => {
