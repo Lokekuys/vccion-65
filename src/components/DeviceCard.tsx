@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain, Zap } from 'lucide-react';
+import { Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, Pencil, Hand, Calendar, Brain, Zap, SignalZero } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { SmartPlug } from '@/types/device';
@@ -47,9 +47,10 @@ interface DeviceCardProps {
   onToggle: (deviceId: string) => void;
   onSelect: (device: SmartPlug) => void;
   countdownEndsAt?: number;
+  isSensorBoxOnline?: boolean;
 }
 
-export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: DeviceCardProps) {
+export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt, isSensorBoxOnline = true }: DeviceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editName, setEditName] = useState(device.name);
@@ -178,10 +179,23 @@ export function DeviceCard({ device, onToggle, onSelect, countdownEndsAt }: Devi
           )}
         </div>
 
-        {/* Sensor Readings */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <OccupancyDisplay status={sensorData.occupancy} compact />
-          <LightLevelDisplay lux={sensorData.lightLevel} compact />
+        {/* Sensor Readings — localized "sensor box disconnected" overlay */}
+        <div className="relative mb-4">
+          <div className={cn(
+            'grid grid-cols-2 gap-2 transition-opacity',
+            !isSensorBoxOnline && 'opacity-40 blur-[1px] pointer-events-none select-none'
+          )}>
+            <OccupancyDisplay status={sensorData.occupancy} compact />
+            <LightLevelDisplay lux={sensorData.lightLevel} compact />
+          </div>
+          {!isSensorBoxOnline && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-card/95 border border-border shadow-sm text-[11px] font-medium text-muted-foreground">
+                <SignalZero className="w-3 h-3 text-warning" />
+                Sensor box disconnected
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Live Wattage Reading — forced to 0 W when offline */}
