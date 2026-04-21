@@ -168,9 +168,6 @@ export function PowerAnalytics({
             )}
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          Based on <strong>recorded usage history</strong> (analyticsLogs). Persists when devices are off.
-        </p>
       </CardHeader>
       <CardContent className="px-3 sm:px-6 overflow-hidden">
         <Tabs defaultValue="daily" className="w-full">
@@ -215,7 +212,7 @@ export function PowerAnalytics({
               </div>
               <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyChart} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <BarChart data={weeklyChart} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                     <XAxis
                       dataKey="date"
@@ -224,14 +221,16 @@ export function PowerAnalytics({
                       tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     />
                     <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                      domain={[0, 0.5]}
-                      ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]}
-                      allowDataOverflow
-                      tickFormatter={(v) => `${Number(v).toFixed(1)} kWh`}
-                    />
+  axisLine={false}
+  tickLine={false}
+  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', dy: 4 }}
+  domain={[0, 0.5]}
+  ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]}
+  interval={0} // <--- This forces every line to render
+  allowDataOverflow
+  width={35}
+  tickFormatter={(v) => `${Number(v).toFixed(1)}`}
+/>
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
