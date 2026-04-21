@@ -234,17 +234,20 @@ export function DeviceDetailPanel({
               {CONTROL_MODES.map((mode) => {
                 const Icon = mode.icon;
                 const isActive = controlMode === mode.value;
+                const isSmartDisabled = mode.value === 'smart' && !isSensorBoxOnline;
+                const isDisabled = isOffline || isSmartDisabled;
                 return (
                   <button
                     key={mode.value}
                     onClick={() => onControlModeChange(device.id, mode.value)}
-                    disabled={isOffline}
+                    disabled={isDisabled}
+                    title={isSmartDisabled ? 'Sensor box required for automation' : undefined}
                     className={cn(
                       "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center",
                       isActive
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-transparent bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
-                      isOffline && "cursor-not-allowed"
+                      isDisabled && "cursor-not-allowed opacity-50 hover:bg-muted hover:text-muted-foreground"
                     )}
                   >
                     <Icon className="w-5 h-5" />
@@ -256,6 +259,12 @@ export function DeviceDetailPanel({
             <p className="text-xs text-muted-foreground">
               {CONTROL_MODES.find((m) => m.value === controlMode)?.description}
             </p>
+            {!isSensorBoxOnline && (
+              <p className="text-[11px] text-warning flex items-center gap-1">
+                <SignalZero className="w-3 h-3" />
+                Smart mode unavailable — sensor box required for automation.
+              </p>
+            )}
           </div>
 
           {/* Schedule Editor (shown in scheduled mode) */}
@@ -270,7 +279,7 @@ export function DeviceDetailPanel({
 
           {/* Smart Mode Settings (shown in smart mode) */}
           {controlMode === 'smart' && (
-            <div className={cn("space-y-4", isOffline && "opacity-50 pointer-events-none")}>
+            <div className={cn("space-y-4", (isOffline || !isSensorBoxOnline) && "opacity-50 pointer-events-none")}>
               <div className="space-y-2">
                 <Label className="font-medium">Smart Automation Preset</Label>
                 <Select
@@ -388,8 +397,23 @@ export function DeviceDetailPanel({
 
           {/* Sensor Readings — sensor box state is independent from plug */}
           <div className="space-y-3">
-            <OccupancyDisplay status={sensorData.occupancy} />
-            <LightLevelDisplay lux={sensorData.lightLevel} />
+            <div className="relative">
+              <div className={cn(
+                'space-y-3 transition-opacity',
+                !isSensorBoxOnline && 'opacity-40 blur-[1px] pointer-events-none select-none'
+              )}>
+                <OccupancyDisplay status={sensorData.occupancy} />
+                <LightLevelDisplay lux={sensorData.lightLevel} />
+              </div>
+              {!isSensorBoxOnline && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/95 border border-border shadow-sm text-xs font-medium text-foreground">
+                    <SignalZero className="w-3.5 h-3.5 text-warning" />
+                    Sensor box disconnected
+                  </div>
+                </div>
+              )}
+            </div>
             <ApplianceActivityDisplay
               applianceActiveNow={isOffline ? false : device.applianceActiveNow}
               lastApplianceActiveAt={device.lastApplianceActiveAt}
