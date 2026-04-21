@@ -616,6 +616,7 @@ export function useDevices() {
     estimatedAnalytics,
     historyAnalytics,
     systemStatus,
+    isSensorBoxOnline,
     toggleDevice,
     setBrightness,
     updateAutomation,
