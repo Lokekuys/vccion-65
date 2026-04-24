@@ -61,42 +61,47 @@ export function AddDeviceScanner() {
         setUnclaimed([]);
         return;
       }
+
       const data = snapshot.val();
       const list: UnclaimedDevice[] = [];
       let plugIndex = 1;
+
       for (const [id, val] of Object.entries(data)) {
         // Defensive: skip malformed entries that aren't objects
         if (!val || typeof val !== 'object') continue;
+
         const d = val as Record<string, any>;
 
         // Discovery filter:
-        // - Must be a smartPlug
-        // - Must NOT be claimed (isClaimed !== true)
-        // - Must NOT be removed (isRemoved !== true)
-        // NOTE: We intentionally do NOT exclude isRegistered === true.
-        // The ESP firmware sets isRegistered: true during initial boot/registration,
-        // so requiring isRegistered !== true would hide valid unclaimed plugs.
-        const normalizedType = String(d.type ?? d.deviceKind ?? '').toLowerCase();
-
-        if (
-            (normalizedType && normalizedType !== 'smartplug' && normalizedType !== 'relayplug') ||
-            d.isClaimed === true ||
-            d.isRemoved === true
-          ) {
+        // - Must NOT be claimed
+        // - Must NOT be removed
+        // NOTE:
+        // We intentionally do NOT filter by type/deviceKind because
+        // this Add Device flow is only used for plugs in the app.
+        if (d.isClaimed === true || d.isRemoved === true) {
           continue;
-          }
+        }
 
-        // Normalize lastSeen to a number (handles both string and number from Firebase)
+        // Normalize lastSeen to a number
         const ls = Number(d.lastSeen || 0);
-        const hasCustomName = d.name && d.name !== id && !d.name.startsWith('plug');
+
+        // Give a cleaner default display name if the device still uses raw ID
+        const hasCustomName =
+          typeof d.name === 'string' &&
+          d.name.trim() !== '' &&
+          d.name !== id &&
+          !d.name.toLowerCase().startsWith('plug');
+
         list.push({
           id,
           name: hasCustomName ? d.name : `Plug${plugIndex}`,
           lastSeen: ls,
-          type: d.type,
+          type: String(d.type ?? d.deviceKind ?? ''),
         });
+
         plugIndex++;
       }
+
       setUnclaimed(list);
     });
 
@@ -146,10 +151,12 @@ export function AddDeviceScanner() {
         name: deviceName.trim(),
         location: location.trim() || '',
       });
+
       toast({
         title: 'Device Added',
         description: 'Your device has been successfully added.',
       });
+
       handleReset();
       setOpen(false);
     } catch (err) {
@@ -186,6 +193,7 @@ export function AddDeviceScanner() {
           Add Device
         </Button>
       </DialogTrigger>
+
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         {step === 'scan' ? (
           <>
@@ -205,9 +213,11 @@ export function AddDeviceScanner() {
                   <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
                     <Radio className="w-8 h-8 text-primary" />
                   </div>
+
                   <p className="text-sm text-muted-foreground text-center">
                     Make sure your smart plug is powered on and connected to WiFi before scanning.
                   </p>
+
                   <Button onClick={startScan} className="gap-2">
                     <Search className="w-4 h-4" />
                     Scan for Devices
@@ -252,6 +262,7 @@ export function AddDeviceScanner() {
                       {onlineDevices.map((device) => {
                         const status = getDeviceStatus(device);
                         const config = STATUS_CONFIG[status];
+
                         return (
                           <Card key={device.id} className="border">
                             <CardContent className="p-4 flex items-center justify-between">
@@ -259,6 +270,7 @@ export function AddDeviceScanner() {
                                 <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
                                   <Plug className="w-5 h-5 text-primary" />
                                 </div>
+
                                 <div>
                                   <p className="font-medium text-sm text-foreground">{device.name}</p>
                                   <p className="text-xs text-muted-foreground font-mono">{device.id}</p>
@@ -267,11 +279,13 @@ export function AddDeviceScanner() {
                                   </p>
                                 </div>
                               </div>
+
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className={statusBadgeClass(status)}>
                                   <StatusIcon status={status} />
                                   {config.label}
                                 </Badge>
+
                                 <Button size="sm" onClick={() => handleSelectDevice(device)}>
                                   Add
                                 </Button>
@@ -299,14 +313,15 @@ export function AddDeviceScanner() {
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              {/* Device ID badge */}
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="font-mono text-xs">
                   {selectedDevice?.id}
                 </Badge>
+
                 {selectedDevice && (() => {
                   const status = getDeviceStatus(selectedDevice);
                   const config = STATUS_CONFIG[status];
+
                   return (
                     <Badge variant="outline" className={statusBadgeClass(status)}>
                       <StatusIcon status={status} />
@@ -316,7 +331,6 @@ export function AddDeviceScanner() {
                 })()}
               </div>
 
-              {/* Device Name */}
               <div className="space-y-2">
                 <Label htmlFor="deviceName">Device Name</Label>
                 <Input
@@ -327,7 +341,6 @@ export function AddDeviceScanner() {
                 />
               </div>
 
-              {/* Description (optional) */}
               <div className="space-y-2">
                 <Label htmlFor="location">Description (optional)</Label>
                 <Input
@@ -351,11 +364,8 @@ export function AddDeviceScanner() {
                 <ChevronLeft className="w-4 h-4" />
                 Back
               </Button>
-              <Button
-                onClick={handleClaim}
-                disabled={claiming || !canSubmit}
-                className="gap-2"
-              >
+
+              <Button onClick={handleClaim} disabled={claiming || !canSubmit} className="gap-2">
                 {claiming ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (

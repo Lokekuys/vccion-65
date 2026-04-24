@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  Settings, ChevronRight, Wifi, WifiOff, AlertTriangle, 
-  Pencil, Hand, Calendar, Brain, Zap, SignalZero, Lock // <--- Added Lock here
+import {
+  Settings, ChevronRight, Wifi, WifiOff, AlertTriangle,
+  Pencil, Hand, Calendar, Brain, Zap, SignalZero, Lock
 } from 'lucide-react';
 
 // UI Components & Hooks
-import { useAdmin } from '@/hooks/useAdmin'; // <--- Added useAdmin here
-import { toast } from 'sonner'; // <--- FIXED: using sonner for toast notifications
+import { useAdmin } from '@/hooks/useAdmin';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
@@ -32,7 +32,6 @@ import { getScheduleStatus, getScheduleLabel } from '@/lib/scheduleUtils';
 // Types & Custom Components
 import { SmartPlug } from '@/types/device';
 import { StatusIndicator } from './StatusIndicator';
-import { PowerIndicator } from './PowerIndicator';
 import { OccupancyDisplay, LightLevelDisplay, ApplianceActivityDisplay } from './SensorDisplay';
 import { CountdownTimer } from './CountdownTimer';
 import { ScheduleCountdown } from './ScheduleCountdown';
@@ -45,14 +44,13 @@ interface DeviceCardProps {
   isSensorBoxOnline?: boolean;
 }
 
-export function DeviceCard({ 
-  device, 
-  onToggle, 
-  onSelect, 
-  countdownEndsAt, 
-  isSensorBoxOnline = true 
+export function DeviceCard({
+  device,
+  onToggle,
+  onSelect,
+  countdownEndsAt,
+  isSensorBoxOnline = true
 }: DeviceCardProps) {
-  // NEW: Fetch admin status for the current user
   const { isAdmin } = useAdmin();
 
   const [isHovered, setIsHovered] = useState(false);
@@ -62,7 +60,6 @@ export function DeviceCard({
   const [showToggleWarning, setShowToggleWarning] = useState(false);
   const [, setTick] = useState(0);
 
-  // Re-render every 5s to keep heartbeat status fresh
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 5000);
     return () => clearInterval(interval);
@@ -74,17 +71,16 @@ export function DeviceCard({
   const isDeviceOnline = connectionStatus === 'connected';
   const effectiveIsOn = isDeviceOnline ? device.isOn : false;
 
-  // NEW: Define if the user is locked out from controlling this device
   const isUserLockedOut = device.isLocked && !isAdmin;
 
   const handleToggle = () => {
-    // NEW: Stop execution if they are locked out (just in case)
     if (isUserLockedOut) return;
 
     if (connectionStatus === 'offline') {
       toast.error('Cannot control device while offline');
       return;
     }
+
     if (device.controlMode === 'smart' || device.controlMode === 'scheduled') {
       setShowToggleWarning(true);
     } else {
@@ -99,8 +95,7 @@ export function DeviceCard({
 
   const handleOpenEditDialog = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // NEW: Prevent opening the edit dialog if locked out
-    if (isUserLockedOut) return; 
+    if (isUserLockedOut) return;
     setEditName(device.name);
     setEditLocation(device.location);
     setShowEditDialog(true);
@@ -121,12 +116,11 @@ export function DeviceCard({
     <Card
       className={cn(
         'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all',
-        isUserLockedOut && 'opacity-90' 
+        isUserLockedOut && 'opacity-90'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => {
-        // NEW: Show a popup toast if a locked-out user clicks the card
         if (isUserLockedOut) {
           toast.error('🔒 Locked by Admin: You do not have permission to configure this device.');
           return;
@@ -138,17 +132,21 @@ export function DeviceCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              'flex items-center justify-center w-10 h-10 rounded-lg transition-colors', 
-              effectiveIsOn ? 'bg-energy/10' : 'bg-muted'
-            )}>
-              <PowerIndicator isOn={effectiveIsOn} size="lg" />
-            </div>
+           <div className="flex items-center justify-center w-10 h-10">
+  <div
+    className={cn(
+      'w-2.5 h-2.5 rounded-full transition-all duration-300',
+      effectiveIsOn
+        ? 'bg-green-500 ring-[5px] ring-green-500/20 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
+        : 'bg-red-500 ring-[5px] ring-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+    )}
+  />
+</div>
+
             <div>
               <div className="flex items-center gap-1">
                 <h3 className="font-semibold text-foreground">{device.name}</h3>
-                
-                {/* NEW: Show red lock icon next to the name if locked */}
+
                 {device.isLocked && (
                   <TooltipProvider>
                     <Tooltip>
@@ -192,20 +190,27 @@ export function DeviceCard({
 
         {/* Control Mode Badge */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Badge className={cn(
-            'automation-badge', 
-            (device.controlMode === 'smart' || device.controlMode === 'scheduled') ? 'active' : 'inactive'
-          )}>
+          <Badge
+            className={cn(
+              'automation-badge',
+              (device.controlMode === 'smart' || device.controlMode === 'scheduled') ? 'active' : 'inactive'
+            )}
+          >
             {device.controlMode === 'manual' && <><Hand className="w-3 h-3" /> Manual</>}
             {device.controlMode === 'scheduled' && <><Calendar className="w-3 h-3" /> Scheduled</>}
             {device.controlMode === 'smart' && <><Brain className="w-3 h-3" /> Smart</>}
           </Badge>
 
           {device.controlMode === 'scheduled' && scheduleLabel && (
-            <Badge variant="outline" className={cn(
-              'text-xs',
-              scheduleStatus === 'active' ? 'text-energy border-energy/30' : 'text-muted-foreground border-muted-foreground/30'
-            )}>
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-xs',
+                scheduleStatus === 'active'
+                  ? 'text-energy border-energy/30'
+                  : 'text-muted-foreground border-muted-foreground/30'
+              )}
+            >
               {scheduleLabel}
             </Badge>
           )}
@@ -213,13 +218,16 @@ export function DeviceCard({
 
         {/* Sensor Readings */}
         <div className="relative mb-4">
-          <div className={cn(
-            'grid grid-cols-2 gap-2 transition-opacity',
-            !isSensorBoxOnline && 'opacity-40 blur-[1px] pointer-events-none select-none'
-          )}>
+          <div
+            className={cn(
+              'grid grid-cols-2 gap-2 transition-opacity',
+              !isSensorBoxOnline && 'opacity-40 blur-[1px] pointer-events-none select-none'
+            )}
+          >
             <OccupancyDisplay status={sensorData.occupancy} compact />
             <LightLevelDisplay lux={sensorData.lightLevel} compact />
           </div>
+
           {!isSensorBoxOnline && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="px-4 py-1.5 rounded-md bg-card/95 border border-red-500/30 shadow-sm text-[11px] font-medium text-red-500">
@@ -244,7 +252,11 @@ export function DeviceCard({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{connectionStatus === 'offline' ? 'Live readings paused while the plug is offline.' : 'Automatically read from the device.'}</p>
+              <p>
+                {connectionStatus === 'offline'
+                  ? 'Live readings paused while the plug is offline.'
+                  : 'Automatically read from the device.'}
+              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -268,19 +280,24 @@ export function DeviceCard({
           </Tooltip>
         </TooltipProvider>
 
-        {countdownEndsAt && <div className="mt-2"><CountdownTimer endsAt={countdownEndsAt} /></div>}
-        <div className="mt-2"><ScheduleCountdown device={device} /></div>
+        {countdownEndsAt && (
+          <div className="mt-2">
+            <CountdownTimer endsAt={countdownEndsAt} />
+          </div>
+        )}
+
+        <div className="mt-2">
+          <ScheduleCountdown device={device} />
+        </div>
 
         {/* Footer Controls */}
         <div className="relative flex items-center justify-between mt-4 pt-4 border-t">
-          
-          {/* NEW: Invisible overlay that catches clicks on the disabled footer */}
           {isUserLockedOut && (
-            <div 
-              className="absolute inset-0 z-10 cursor-not-allowed" 
+            <div
+              className="absolute inset-0 z-10 cursor-not-allowed"
               onClick={(e) => {
                 e.stopPropagation();
-                toast.error("🔒 Locked by Admin: You do not have permission to control this device.");
+                toast.error('🔒 Locked by Admin: You do not have permission to control this device.');
               }}
             />
           )}
@@ -289,16 +306,16 @@ export function DeviceCard({
             <Switch
               checked={effectiveIsOn}
               onCheckedChange={handleToggle}
-              // NEW: Disable switch if offline OR if the user is locked out
-              disabled={connectionStatus === 'offline' || isUserLockedOut} 
+              disabled={connectionStatus === 'offline' || isUserLockedOut}
             />
             <span className="text-sm text-muted-foreground">{effectiveIsOn ? 'On' : 'Off'}</span>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+
+          <Button
+            variant="ghost"
+            size="sm"
             className={cn('transition-transform', isHovered && !isUserLockedOut && 'translate-x-1')}
-            disabled={isUserLockedOut} // NEW: Disable Details button if locked out
+            disabled={isUserLockedOut}
           >
             <Settings className="w-4 h-4 mr-1" /> Details <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
@@ -309,10 +326,12 @@ export function DeviceCard({
       <AlertDialog open={showToggleWarning} onOpenChange={setShowToggleWarning}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Override {device.controlMode === 'smart' ? 'Smart' : 'Scheduled'} Mode?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Override {device.controlMode === 'smart' ? 'Smart' : 'Scheduled'} Mode?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {device.controlMode === 'smart' 
-                ? 'This device is in Smart Mode. Manual toggle will override occupancy automation. Continue?' 
+              {device.controlMode === 'smart'
+                ? 'This device is in Smart Mode. Manual toggle will override occupancy automation. Continue?'
                 : 'This device is in Scheduled Mode. Manual toggle will switch it to Manual Mode. Continue?'}
             </AlertDialogDescription>
           </AlertDialogHeader>

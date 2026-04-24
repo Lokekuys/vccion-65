@@ -176,13 +176,31 @@ export function DeviceDetailPanel({
         <SheetHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={cn("flex items-center justify-center w-12 h-12 rounded-xl", effectiveIsOn ? "bg-energy/10" : "bg-muted")}>
-  <PowerIndicator isOn={effectiveIsOn} size="lg" />
-</div>
-              <div>
-                <SheetTitle className="text-left">{device.name}</SheetTitle>
-                <SheetDescription className="text-left">{device.location}</SheetDescription>
+              
+              {/* Glowing Dot Indicator */}
+              <div className="flex items-center justify-center w-12 h-12">
+                <div
+                  className={cn(
+                    'w-3 h-3 rounded-full transition-all duration-300',
+                    effectiveIsOn
+                      ? 'bg-green-500 ring-[6px] ring-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.6)]'
+                      : 'bg-red-500 ring-[6px] ring-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.6)]'
+                  )}
+                />
               </div>
+
+              {/* Stacked Name and Location Fix */}
+              <div className="flex flex-col justify-center gap-1">
+                <SheetTitle className="text-left text-lg font-semibold leading-none">
+                  {device.name}
+                </SheetTitle>
+                {device.location && (
+                  <SheetDescription className="text-left text-sm text-muted-foreground leading-none">
+                    {device.location}
+                  </SheetDescription>
+                )}
+              </div>
+
             </div>
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-2">
@@ -209,21 +227,21 @@ export function DeviceDetailPanel({
 
           {/* Power Control */}
           <div className={cn("flex items-center justify-between p-4 rounded-xl bg-muted", isOffline && "opacity-50")}>
-  <div className="flex items-center gap-3">
-    <Power className="w-5 h-5 text-primary" />
-    <div>
-      <Label className="text-base font-medium">Power</Label>
-      <p className="text-sm text-muted-foreground">
-        {effectiveIsOn ? "Device is on" : "Device is off"}
-      </p>
-    </div>
-  </div>
-  <Switch
-    checked={effectiveIsOn}
-    onCheckedChange={handleToggle}
-    disabled={isOffline}
-  />
-</div>
+            <div className="flex items-center gap-3">
+              <Power className="w-5 h-5 text-primary" />
+              <div>
+                <Label className="text-base font-medium">Power</Label>
+                <p className="text-sm text-muted-foreground">
+                  {effectiveIsOn ? "Device is on" : "Device is off"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={effectiveIsOn}
+              onCheckedChange={handleToggle}
+              disabled={isOffline}
+            />
+          </div>
 
           <Separator />
 
