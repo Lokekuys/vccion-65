@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Shield,
   Users,
-  Zap,
   Activity,
   ArrowLeft,
   Crown,
@@ -14,9 +13,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Trash2,
-  Settings,
-  Lock, // <--- Added Lock
-  Unlock, // <--- Added Unlock
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,7 +26,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -41,6 +38,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+// IMPORT CONNECTION STATUS CHECKER
+import { computeConnectionStatus } from "@/lib/deviceStatus";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -52,16 +51,10 @@ const AdminDashboard = () => {
     toggleDevice,
     removeDevice,
     updateVecoRate,
-    setControlMode,
-    toggleDeviceLock, // <--- Added toggleDeviceLock from your hook
+    toggleDeviceLock,
   } = useDevices();
 
   const [newVecoRate, setNewVecoRate] = useState<string>(vecoRate.toString());
-
-  const totalTodayKwh = devices?.reduce((sum, d) => sum + (d.powerData?.todayKwh ?? 0), 0) ?? 0;
-  const totalWeeklyKwh = totalTodayKwh * 7; // estimated
-  const activeDevices = devices?.filter((d) => d.isOn).length ?? 0;
-  const totalDevices = devices?.length ?? 0;
 
   const handleVecoRateUpdate = () => {
     const rate = parseFloat(newVecoRate);
@@ -86,7 +79,6 @@ const AdminDashboard = () => {
     toast.success(`Removed ${deviceName}`);
   };
 
-  // NEW: Handler for the Lock Button
   const handleToggleLock = async (deviceId: string, currentLockState: boolean, deviceName: string) => {
     try {
       await toggleDeviceLock(deviceId, currentLockState);
@@ -244,82 +236,93 @@ const AdminDashboard = () => {
                 <CardDescription>Force-toggle, lock, or remove any device</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {devices?.map((d) => (
-                  <div
-                    key={d.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 flex-wrap gap-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          d.isOn ? "bg-power-on shadow-[0_0_8px_hsl(var(--power-on))]" : "bg-power-off"
-                        }`}
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{d.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {d.location} · {d.powerData.currentWatts}W · {d.controlMode}
-                        </p>
+                {devices?.map((d) => {
+                  // OFFLINE LOGIC CHECK
+                  const isOffline = computeConnectionStatus(d.lastSeen) === 'offline';
+                  const effectiveIsOn = isOffline ? false : d.isOn;
+                  const effectiveWatts = isOffline ? 0 : (d.powerData?.currentWatts ?? 0);
+
+                  return (
+                    <div
+                      key={d.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border bg-muted/30 flex-wrap gap-2 transition-opacity ${isOffline ? 'opacity-70' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            effectiveIsOn 
+                              ? "bg-power-on shadow-[0_0_8px_hsl(var(--power-on))]" 
+                              : isOffline ? "bg-muted-foreground" : "bg-power-off"
+                          }`}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{d.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {d.location} · {effectiveWatts.toFixed(1)}W · {isOffline ? "Offline" : d.controlMode}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        
+                        {/* Lock Button - DISABLED WHEN OFFLINE */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isOffline}
+                          className={
+                            d.isLocked
+                              ? "text-destructive border-destructive bg-destructive/10 w-[100px]"
+                              : "text-muted-foreground w-[100px]"
+                          }
+                          onClick={() => handleToggleLock(d.id, !!d.isLocked, d.name)}
+                        >
+                          {d.isLocked ? (
+                            <><Lock className="w-4 h-4 mr-1.5" /> Locked</>
+                          ) : (
+                            <><Unlock className="w-4 h-4 mr-1.5" /> Unlocked</>
+                          )}
+                        </Button>
+
+                        {/* Power Toggle Button - DISABLED WHEN OFFLINE */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isOffline}
+                          onClick={() => handleForceToggle(d.id, d.name)}
+                        >
+                          {effectiveIsOn ? (
+                            <ToggleRight className="w-4 h-4 mr-1 text-power-on" />
+                          ) : (
+                            <ToggleLeft className="w-4 h-4 mr-1" />
+                          )}
+                          {effectiveIsOn ? "Turn Off" : "Turn On"}
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove Device</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Permanently remove {d.name} from the system?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleForceRemove(d.id, d.name)}>
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      
-                      {/* NEW: Lock Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={
-                          d.isLocked
-                            ? "text-destructive border-destructive bg-destructive/10 w-[100px]"
-                            : "text-muted-foreground w-[100px]"
-                        }
-                        onClick={() => handleToggleLock(d.id, !!d.isLocked, d.name)}
-                      >
-                        {d.isLocked ? (
-                          <><Lock className="w-4 h-4 mr-1.5" /> Locked</>
-                        ) : (
-                          <><Unlock className="w-4 h-4 mr-1.5" /> Unlocked</>
-                        )}
-                      </Button>
-
-                      {/* Power Toggle Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleForceToggle(d.id, d.name)}
-                      >
-                        {d.isOn ? (
-                          <ToggleRight className="w-4 h-4 mr-1 text-power-on" />
-                        ) : (
-                          <ToggleLeft className="w-4 h-4 mr-1" />
-                        )}
-                        {d.isOn ? "Turn Off" : "Turn On"}
-                      </Button>
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove Device</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Permanently remove {d.name} from the system?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleForceRemove(d.id, d.name)}>
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {(!devices || devices.length === 0) && (
                   <p className="text-sm text-muted-foreground text-center py-4">No devices registered</p>
                 )}

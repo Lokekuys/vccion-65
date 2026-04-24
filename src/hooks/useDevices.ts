@@ -62,8 +62,10 @@ export function useDevices() {
       if (snapshot.exists()) {
         const data = snapshot.val();
         
-        // Use current time if the ESP doesn't send a valid epoch timestamp
-        const lastSeenMs = Date.now();
+        // If the DB has a valid long timestamp, use it. Otherwise, track exactly when this ping arrived.
+        const lastSeenMs = (data.lastSeen && data.lastSeen > 1000000000000) 
+          ? data.lastSeen 
+          : Date.now();
           
         const parsed = {
           occupancy: data.presence?.detected === true ? "occupied" : "vacant",
@@ -77,14 +79,23 @@ export function useDevices() {
     return () => unsubscribe();
   }, []);
 
-  const [, setSensorTick] = useState(0);
+  const [sensorTick, setSensorTick] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setSensorTick((t) => t + 1), 10_000);
     return () => clearInterval(i);
   }, []);
 
-  // Simplified online check: If we have data in memory, it's online.
-  const isSensorBoxOnline = !!sharedSensorData;
+  // Real-time online check: Re-evaluates every 10 seconds based on the last ping
+  const isSensorBoxOnline = useMemo(() => {
+    if (!sharedSensorData) return false;
+    
+    // Check the status using the time we last received data
+    const status = computeConnectionStatus(sharedSensorData.lastSeenMs);
+    
+    // It's online if it's connected.
+    return status === 'connected';
+  }, [sharedSensorData, sensorTick]);
+
 
   /* ---------- READ FROM FIREBASE ---------- */
   useEffect(() => {
