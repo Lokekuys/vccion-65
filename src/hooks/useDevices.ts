@@ -62,7 +62,6 @@ export function useDevices() {
       if (snapshot.exists()) {
         const data = snapshot.val();
         
-        // If the DB has a valid long timestamp, use it. Otherwise, track exactly when this ping arrived.
         const lastSeenMs = (data.lastSeen && data.lastSeen > 1000000000000) 
           ? data.lastSeen 
           : Date.now();
@@ -85,14 +84,9 @@ export function useDevices() {
     return () => clearInterval(i);
   }, []);
 
-  // Real-time online check: Re-evaluates every 10 seconds based on the last ping
   const isSensorBoxOnline = useMemo(() => {
     if (!sharedSensorData) return false;
-    
-    // Check the status using the time we last received data
     const status = computeConnectionStatus(sharedSensorData.lastSeenMs);
-    
-    // It's online if it's connected.
     return status === 'connected';
   }, [sharedSensorData, sensorTick]);
 
@@ -119,13 +113,10 @@ export function useDevices() {
             isOn: d.relayState ?? d.isOn ?? false,
             isLocked: d.isLocked ?? false,
             isOnline: true,
-            controlMode:
-            d.controlMode ??
-            (d.mode === 0 ? 'off' : d.mode === 1 ? 'manual' : d.mode === 2 ? 'smart' : d.mode === 3 ? 'scheduled' : 'manual'),
+            controlMode: d.controlMode ?? 'manual',
             smartMode: (d.smartMode as SmartMode) ?? 'occupancy',
 
             sensorData: {
-              // ALWAYS use the shared sensor box data as the source of truth.
               occupancy: sharedSensorRef.current?.occupancy ?? "unknown",
               lightLevel: sharedSensorRef.current?.lightLevel ?? 0,
               lastUpdated: new Date(),
@@ -140,14 +131,9 @@ export function useDevices() {
             },
 
             automationSettings: {
-              occupancyControlEnabled:
-                d.automationSettings?.occupancyControlEnabled ?? false,
-              autoOffDelaySeconds:
-                d.automationSettings?.autoOffDelaySeconds ?? 300,
-              adaptiveLightingEnabled:
-                d.automationSettings?.adaptiveLightingEnabled ?? false,
-              brightnessMin: d.automationSettings?.brightnessMin ?? 20,
-              brightnessMax: d.automationSettings?.brightnessMax ?? 100,
+              occupancyControlEnabled: d.automationSettings?.occupancyControlEnabled ?? false,
+              autoOffDelaySeconds: d.automationSettings?.autoOffDelaySeconds ?? 300,
+              adaptiveLightingEnabled: d.automationSettings?.adaptiveLightingEnabled ?? false,
               targetLux: d.automationSettings?.targetLux ?? 400,
             },
 
@@ -190,7 +176,6 @@ export function useDevices() {
     return () => unsubscribe();
   }, []);
 
-  // Re-merge sensor data into devices when sharedSensorData changes.
   useEffect(() => {
     if (!sharedSensorData || !isSensorBoxOnline) return;
     setDevices((prev) => {
@@ -209,12 +194,9 @@ export function useDevices() {
   /* ---------- ESTIMATED ANALYTICS ---------- */
   const estimatedAnalytics = useMemo(() => {
     if (!devices) return null;
-
     const now = new Date();
     const perDevice = devices.map((d) => {
-      // Use live PZEM wattage reading instead of rated wattage
       const watts = d.powerData?.currentWatts ?? 0;
-      // Calculate ON duration in hours
       let onHoursToday = 0;
       if (d.isOn && d.turnedOnAt) {
         const turnedOn = new Date(d.turnedOnAt);
@@ -222,10 +204,8 @@ export function useDevices() {
         const effectiveStart = turnedOn > startOfDay ? turnedOn : startOfDay;
         onHoursToday = Math.max(0, (now.getTime() - effectiveStart.getTime()) / 3600000);
       }
-
       const dailyKwh = (watts / 1000) * onHoursToday;
       const dailyCost = dailyKwh * vecoRate;
-      // Estimate monthly: assume average daily usage × 30
       const monthlyKwh = dailyKwh * 30;
       const monthlyCost = monthlyKwh * vecoRate;
 
@@ -250,7 +230,6 @@ export function useDevices() {
       ? perDevice.reduce((max, d) => d.dailyKwh > max.dailyKwh ? d : max, perDevice[0])
       : null;
 
-    // Budget status
     let budgetStatus: 'ok' | 'nearing' | 'almost' | 'exceeded' = 'ok';
     let budgetPercent = 0;
     if (monthlyBudget > 0) {
@@ -273,15 +252,12 @@ export function useDevices() {
     };
   }, [devices, vecoRate, monthlyBudget]);
 
-  /* ---------- HISTORY-BASED ANALYTICS (source of truth) ---------- */
   const deviceMeta = useMemo(
     () =>
       (devices ?? []).map((d) => ({
         id: d.id,
         name: d.name,
         deviceType: d.deviceType ?? d.name,
-        // Pass live state to analytics so per-device rows can show
-        // accurate "Inactive" / "Active now" labels (UI-only, no data mutation).
         isOnline: computeConnectionStatus(d.lastSeen) === 'connected',
         applianceActiveNow: d.applianceActiveNow ?? false,
         lastApplianceActiveAt: d.lastApplianceActiveAt ?? 0,
@@ -290,49 +266,51 @@ export function useDevices() {
   );
   const historyAnalytics = useAnalyticsLogs(deviceMeta, vecoRate, monthlyBudget);
 
-  /* ---------- AUTO-OFF TIMER LOGIC ---------- */
+  /* ---------- AUTO-OFF TIMER LOGIC (FLICKER & ISOLATION FIX) ---------- */
   const vacancyTimers = useRef<Record<string, NodeJS.Timeout>>({});
   const [countdowns, setCountdowns] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (!devices) return;
+    if (!devices || !isSensorBoxOnline) return;
 
     devices.forEach((device) => {
-      const {
-        id,
-        isOn,
-        sensorData,
-        automationSettings: auto,
-        controlMode,
-        smartMode,
-      } = device;
+      const { id, isOn, sensorData, automationSettings: auto, controlMode, smartMode } = device;
 
       if (controlMode !== 'smart') {
         if (vacancyTimers.current[id]) {
           clearTimeout(vacancyTimers.current[id]);
           delete vacancyTimers.current[id];
-          setCountdowns((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-          });
+          setCountdowns(prev => { const n = {...prev}; delete n[id]; return n; });
         }
         return;
       }
 
-      // Derive binary signals from sensors
-      const occupancySignal = sensorData.occupancy === 'occupied'; // 1 = occupied
+      const isOccupied = sensorData.occupancy === 'occupied';
       const targetLux = auto.targetLux ?? 400;
-      const lightSignal = (sensorData.lightLevel ?? 0) < targetLux; // 1 = dark / needs light
+      
+      // Hysteresis buffer of 20 lux prevents rapid flickering
+      const isDarkEnough = sensorData.lightLevel < targetLux;
+      const isBrightEnough = sensorData.lightLevel > (targetLux + 20);
 
-      // Determine if device SHOULD be on based on smart preset
+      // 1. DETERMINE IF WE SHOULD BE ON (Strict isolation)
       let shouldBeOn = false;
-      const mode = smartMode ?? 'occupancy';
-      if (mode === 'occupancy') shouldBeOn = occupancySignal;
-      else if (mode === 'light') shouldBeOn = lightSignal;
-      else if (mode === 'both') shouldBeOn = occupancySignal && lightSignal;
+      if (smartMode === 'occupancy') {
+        shouldBeOn = isOccupied;
+      } else if (smartMode === 'light') {
+        shouldBeOn = isOn ? !isBrightEnough : isDarkEnough;
+      } else if (smartMode === 'both') {
+        shouldBeOn = isOccupied && (isOn ? !isBrightEnough : isDarkEnough);
+      }
 
+      // 2. TURN ON ACTION
       if (!isOn && shouldBeOn) {
+        // Clear any pending off-timers if conditions are met
+        if (vacancyTimers.current[id]) {
+          clearTimeout(vacancyTimers.current[id]);
+          delete vacancyTimers.current[id];
+          setCountdowns(prev => { const n = {...prev}; delete n[id]; return n; });
+        }
+        
         update(ref(rtdb, `devices/${id}`), {
           isOn: true,
           relayState: true,
@@ -341,8 +319,13 @@ export function useDevices() {
         });
       }
 
+      // 3. TURN OFF ACTION (The logic-lock prevents flicker during vacancy)
       if (isOn && !shouldBeOn) {
-        if (!auto.occupancyControlEnabled) {
+        // Only use the timer if the mode actually involves occupancy logic
+        const useTimer = auto.occupancyControlEnabled && (smartMode === 'occupancy' || smartMode === 'both');
+
+        if (!useTimer) {
+          // Immediate Turn Off for Light-Only mode (prevents Logic War)
           update(ref(rtdb, `devices/${id}`), {
             isOn: false,
             relayState: false,
@@ -350,9 +333,9 @@ export function useDevices() {
             turnedOnAt: null,
           });
         } else if (!vacancyTimers.current[id]) {
+          // Delayed Turn Off for Occupancy-based modes
           const delayMs = (auto.autoOffDelaySeconds ?? 300) * 1000;
           const endsAt = Date.now() + delayMs;
-
           setCountdowns((prev) => ({ ...prev, [id]: endsAt }));
 
           vacancyTimers.current[id] = setTimeout(() => {
@@ -363,24 +346,12 @@ export function useDevices() {
               turnedOnAt: null,
             });
             delete vacancyTimers.current[id];
-            setCountdowns((prev) => {
-              const next = { ...prev };
-              delete next[id];
-              return next;
-            });
+            setCountdowns(prev => { const n = {...prev}; delete n[id]; return n; });
           }, delayMs);
         }
-      } else if (vacancyTimers.current[id]) {
-        clearTimeout(vacancyTimers.current[id]);
-        delete vacancyTimers.current[id];
-        setCountdowns((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
       }
     });
-  }, [devices]);
+  }, [devices, isSensorBoxOnline]);
 
   useEffect(() => {
     return () => {
@@ -396,7 +367,6 @@ export function useDevices() {
 
   useEffect(() => {
     if (!devices) return;
-
     const checkSchedules = () => {
       const now = new Date();
       const currentDay = DAY_MAP[now.getDay()];
@@ -471,19 +441,8 @@ export function useDevices() {
       };
 
      if (device.controlMode === 'scheduled' || device.controlMode === 'smart') {
-     updates.controlMode = 'manual';
-     updates.mode = 1;
-}
-      if (device.controlMode === 'smart' && vacancyTimers.current[deviceId]) {
-        clearTimeout(vacancyTimers.current[deviceId]);
-        delete vacancyTimers.current[deviceId];
-        setCountdowns((prev) => {
-          const next = { ...prev };
-          delete next[deviceId];
-          return next;
-        });
-      }
-
+       updates.controlMode = 'manual';
+     }
       update(ref(rtdb, `devices/${deviceId}`), updates);
     },
     [devices]
@@ -516,24 +475,25 @@ export function useDevices() {
     []
   );
 
-  // Remove device: fully reset claim/registration/removal flags so it
-  // becomes immediately discoverable again by the Add Device scanner.
-  // We do NOT keep isRemoved=true because the scanner filters those out.
   const removeDevice = useCallback((deviceId: string) => {
     update(ref(rtdb, `devices/${deviceId}`), {
       isClaimed: false,
       isRegistered: false,
       isRemoved: false,
       removedAt: new Date().toISOString(),
-      // Clear user-set metadata so the next claimer sees a fresh device
       name: null,
       location: null,
       controlMode: 'manual',
-      mode: 1,
     });
   }, []);
 
   const setSmartMode = useCallback((deviceId: string, mode: SmartMode) => {
+    if (vacancyTimers.current[deviceId]) {
+      clearTimeout(vacancyTimers.current[deviceId]);
+      delete vacancyTimers.current[deviceId];
+      setCountdowns(prev => { const n = {...prev}; delete n[deviceId]; return n; });
+    }
+
     update(ref(rtdb, `devices/${deviceId}`), {
       smartMode: mode,
       lastSeen: Date.now(),
@@ -569,43 +529,12 @@ export function useDevices() {
   }, []);
 
   const setControlMode = useCallback((deviceId: string, mode: ControlMode) => {
-  const modeMap: Record<ControlMode, number> = {
-    manual: 1,
-    smart: 2,
-    scheduled: 3,
-  };
+    update(ref(rtdb, `devices/${deviceId}`), {
+      controlMode: mode,
+      lastSeen: Date.now(),
+    });
+  }, [devices]);
 
-  const updates: Record<string, any> = {
-    controlMode: mode,
-    mode: modeMap[mode],
-    lastSeen: Date.now(),
-  };
-
-  if (mode === 'scheduled') {
-    const device = devices?.find((d) => d.id === deviceId);
-    const existing = device?.override?.schedule;
-
-    if (!existing?.days?.length || !existing?.startTime || !existing?.endTime) {
-      updates['override/schedule'] = {
-        enabled: true,
-        days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-        startTime: '08:00',
-        endTime: '18:00',
-      };
-    }
-
-    // Also create ESP-friendly schedule fields
-    updates['schedule'] = {
-      enabled: true,
-      startHour: 8,
-      startMinute: 0,
-      endHour: 18,
-      endMinute: 0,
-    };
-  }
-
-  update(ref(rtdb, `devices/${deviceId}`), updates);
-}, [devices]);
   const refreshDevices = useCallback(() => {
     window.location.reload();
   }, []);

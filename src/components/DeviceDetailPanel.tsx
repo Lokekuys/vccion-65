@@ -126,6 +126,7 @@ export function DeviceDetailPanel({
     adaptiveLightingEnabled: false,
   };
   const controlMode = device.controlMode ?? 'manual';
+  const currentSmartMode = device.smartMode ?? 'occupancy';
 
   const totalSeconds = automationSettings.autoOffDelaySeconds ?? 300;
   const autoOffHours = Math.floor(totalSeconds / 3600);
@@ -155,6 +156,7 @@ export function DeviceDetailPanel({
       onToggle(device.id);
     }
   };
+
   const handleResetWifi = async () => {
     setIsResettingWifi(true);
     try {
@@ -168,6 +170,8 @@ export function DeviceDetailPanel({
     }
   };
 
+  // Helper to determine if occupancy-based controls should be disabled
+  const isOccupancyLogicDisabled = currentSmartMode === 'light';
 
   return (
     <>
@@ -222,9 +226,6 @@ export function DeviceDetailPanel({
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Offline state is already shown by the top-right status indicator —
-              no redundant centered block here. Controls are simply disabled. */}
-
           {/* Power Control */}
           <div className={cn("flex items-center justify-between p-4 rounded-xl bg-muted", isOffline && "opacity-50")}>
             <div className="flex items-center gap-3">
@@ -285,7 +286,7 @@ export function DeviceDetailPanel({
             )}
           </div>
 
-          {/* Schedule Editor (shown in scheduled mode) */}
+          {/* Schedule Editor */}
           {controlMode === 'scheduled' && (
             <ScheduleEditor
               schedule={device.override?.schedule}
@@ -295,13 +296,13 @@ export function DeviceDetailPanel({
             />
           )}
 
-          {/* Smart Mode Settings (shown in smart mode) */}
+          {/* Smart Mode Settings */}
           {controlMode === 'smart' && (
             <div className={cn("space-y-4", (isOffline || !isSensorBoxOnline) && "opacity-50 pointer-events-none")}>
               <div className="space-y-2">
                 <Label className="font-medium">Smart Automation Preset</Label>
                 <Select
-                  value={device.smartMode ?? 'occupancy'}
+                  value={currentSmartMode}
                   onValueChange={(v) => onSmartModeChange?.(device.id, v as SmartMode)}
                   disabled={isOffline}
                 >
@@ -315,21 +316,36 @@ export function DeviceDetailPanel({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {SMART_MODES.find((m) => m.value === (device.smartMode ?? 'occupancy'))?.description}
+                  {SMART_MODES.find((m) => m.value === currentSmartMode)?.description}
                 </p>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
-                <Label>Auto-Off on Vacancy</Label>
+              {/* AUTO-OFF SWITCH: Disabled visually if Smart Mode 2 is active */}
+              <div className={cn(
+                "flex items-center justify-between p-3 rounded-lg bg-muted transition-opacity",
+                isOccupancyLogicDisabled && "opacity-40 grayscale-[0.5]"
+              )}>
+                <div className="flex flex-col gap-0.5">
+                  <Label className={cn(isOccupancyLogicDisabled && "text-muted-foreground")}>
+                    Auto-Off on Vacancy
+                  </Label>
+                  {isOccupancyLogicDisabled && (
+                    <span className="text-[10px] text-warning font-medium">Disabled in Light-Only mode</span>
+                  )}
+                </div>
                 <Switch
-                  checked={automationSettings.occupancyControlEnabled}
+                  checked={isOccupancyLogicDisabled ? false : automationSettings.occupancyControlEnabled}
                   onCheckedChange={(checked) => onAutomationChange(device.id, { occupancyControlEnabled: checked })}
-                  disabled={isOffline}
+                  disabled={isOffline || isOccupancyLogicDisabled}
                 />
               </div>
 
+              {/* AUTO-OFF DELAY: Disabled visually if Smart Mode 2 is active or Switch is OFF */}
               {automationSettings.occupancyControlEnabled && (
-                <div className="space-y-3 p-3 rounded-lg border">
+                <div className={cn(
+                  "space-y-3 p-3 rounded-lg border transition-opacity",
+                  isOccupancyLogicDisabled && "opacity-40 pointer-events-none"
+                )}>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <Label>Auto-Off Delay</Label>
@@ -343,6 +359,7 @@ export function DeviceDetailPanel({
                         value={autoOffHours}
                         onChange={(e) => handleTimeChange(parseInt(e.target.value) || 0, autoOffMinutes, autoOffSeconds)}
                         className="w-16 text-center font-mono"
+                        disabled={isOccupancyLogicDisabled}
                       />
                       <span className="text-sm text-muted-foreground">h</span>
                     </div>
@@ -355,6 +372,7 @@ export function DeviceDetailPanel({
                         value={autoOffMinutes}
                         onChange={(e) => handleTimeChange(autoOffHours, parseInt(e.target.value) || 0, autoOffSeconds)}
                         className="w-16 text-center font-mono"
+                        disabled={isOccupancyLogicDisabled}
                       />
                       <span className="text-sm text-muted-foreground">m</span>
                     </div>
@@ -367,19 +385,22 @@ export function DeviceDetailPanel({
                         value={autoOffSeconds}
                         onChange={(e) => handleTimeChange(autoOffHours, autoOffMinutes, parseInt(e.target.value) || 0)}
                         className="w-16 text-center font-mono"
+                        disabled={isOccupancyLogicDisabled}
                       />
                       <span className="text-sm text-muted-foreground">s</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Device turns off after {autoOffHours > 0 ? `${autoOffHours}h ` : ""}{autoOffMinutes > 0 ? `${autoOffMinutes}m ` : ""}{autoOffSeconds}s of vacancy
-                  </p>
+                  {!isOccupancyLogicDisabled && (
+                    <p className="text-xs text-muted-foreground">
+                      Device turns off after {autoOffHours > 0 ? `${autoOffHours}h ` : ""}{autoOffMinutes > 0 ? `${autoOffMinutes}m ` : ""}{autoOffSeconds}s of vacancy
+                    </p>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Brightness - always shown, visually dimmed when off */}
+          {/* Brightness */}
           {device.classification?.pwmCompatible && (
             <>
               <Separator />
@@ -404,8 +425,6 @@ export function DeviceDetailPanel({
 
           {/* Sensor Readings & Power Block */}
           <div className="space-y-3">
-            
-            {/* 1. Sensor Readings */}
             <div className="relative">
               <div className={cn(
                 'space-y-3 transition-opacity',
@@ -414,8 +433,6 @@ export function DeviceDetailPanel({
                 <OccupancyDisplay status={sensorData.occupancy} />
                 <LightLevelDisplay lux={sensorData.lightLevel} />
               </div>
-              
-              {/* Fixed Symmetrical Overlay */}
               {!isSensorBoxOnline && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="px-4 py-1.5 rounded-md bg-card/95 border border-red-500/30 shadow-sm text-[11px] font-medium text-red-500">
@@ -425,7 +442,6 @@ export function DeviceDetailPanel({
               )}
             </div>
 
-            {/* 2. Live Wattage (Moved below sensors, above appliance usage) */}
             <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
               <Zap className="w-4 h-4 text-sensor-power" />
               <span className="text-sm font-medium text-foreground">
@@ -436,14 +452,12 @@ export function DeviceDetailPanel({
               </span>
             </div>
 
-            {/* 3. Appliance Usage */}
             <ApplianceActivityDisplay
               applianceActiveNow={isOffline ? false : device.applianceActiveNow}
               lastApplianceActiveAt={device.lastApplianceActiveAt}
               lastApplianceActiveReadable={device.lastApplianceActiveReadable}
               forceInactive={isOffline}
             />
-            
           </div>
 
           <Separator />
@@ -463,11 +477,6 @@ export function DeviceDetailPanel({
               <RotateCcw className="w-4 h-4" />
               Reconfigure Wi-Fi
             </Button>
-            {isOffline && (
-              <p className="text-[11px] text-muted-foreground">
-                Device must be online to reconfigure Wi-Fi.
-              </p>
-            )}
           </div>
 
           <Separator />
