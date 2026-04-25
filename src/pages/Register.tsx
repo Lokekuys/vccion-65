@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, Link } from "react-router-dom";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, Mail } from "lucide-react";
 import VCCionLogo from "@/assets/VCCion_Logo_Clean.png";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification, 
+  GoogleAuthProvider, 
+  signInWithPopup 
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const Register = () => {
@@ -44,7 +49,14 @@ const Register = () => {
 
     setSubmitting(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
+      
+      // Alert user (you can replace this with a nicer toast notification later)
+      alert("Account created successfully! Please check your email to verify your account.");
+
     } catch (err: any) {
       const code = err.code;
       if (code === "auth/email-already-in-use") {
@@ -56,6 +68,19 @@ const Register = () => {
       } else {
         setError(err.message || "Registration failed");
       }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed");
     } finally {
       setSubmitting(false);
     }
@@ -120,14 +145,36 @@ const Register = () => {
               )}
               Create Account
             </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">
-                Sign in
-              </Link>
-            </p>
           </form>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or sign up with
+              </span>
+            </div>
+          </div>
+
+          <Button 
+            variant="outline" 
+            type="button" 
+            className="w-full mb-4" 
+            onClick={handleGoogleSignIn}
+            disabled={submitting}
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            Google
+          </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary hover:underline font-medium">
+              Sign in
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

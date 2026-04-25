@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, Link } from "react-router-dom";
-import { LogIn, Loader2 } from "lucide-react";
+import { LogIn, Loader2, Mail } from "lucide-react";
 import VCCionLogo from "@/assets/VCCion_Logo_Clean.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { auth } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const Login = () => {
   const { user, loading, login } = useAuth();
@@ -38,6 +40,19 @@ const Login = () => {
           ? "Invalid email or password"
           : err.message || "Login failed"
       );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed");
     } finally {
       setSubmitting(false);
     }
@@ -94,18 +109,40 @@ const Login = () => {
               )}
               Sign In
             </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline font-medium">
-                Register
-              </Link>
-            </p>
           </form>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button 
+            variant="outline" 
+            type="button" 
+            className="w-full mb-4" 
+            onClick={handleGoogleSignIn}
+            disabled={submitting}
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            Google
+          </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-primary hover:underline font-medium">
+              Register
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default Login;
+export default Login; 
