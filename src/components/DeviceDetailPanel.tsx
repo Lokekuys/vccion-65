@@ -35,13 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { StatusIndicator } from "./StatusIndicator";
-import { PowerIndicator } from "./PowerIndicator";
-import { Badge } from "@/components/ui/badge";
-import {
-  OccupancyDisplay,
-  LightLevelDisplay,
-  ApplianceActivityDisplay,
-} from "./SensorDisplay";
+import { OccupancyDisplay, LightLevelDisplay, ApplianceActivityDisplay } from "./SensorDisplay";
 import {
   Sheet,
   SheetContent,
@@ -86,10 +80,10 @@ const CONTROL_MODES: { value: ControlMode; label: string; icon: typeof Hand; des
   { value: 'smart', label: 'Smart', icon: Brain, description: 'Sensor automation' },
 ];
 
+// UPDATED: Removed "Light Only" and promoted "Both" to Smart Two
 const SMART_MODES: { value: SmartMode; label: string; description: string }[] = [
   { value: 'occupancy', label: 'Smart One — Occupancy Only', description: 'Turns ON when the room is occupied. Ignores light.' },
-  { value: 'light', label: 'Smart Two — Light Only', description: 'Turns ON when the area is dark. Ignores occupancy.' },
-  { value: 'both', label: 'Smart Three — Occupancy + Light', description: 'Turns ON only when occupied AND dark.' },
+  { value: 'both', label: 'Smart Two — Occupancy + Light', description: 'Turns ON only when occupied AND dark.' },
 ];
 
 export function DeviceDetailPanel({
@@ -170,9 +164,6 @@ export function DeviceDetailPanel({
     }
   };
 
-  // Helper to determine if occupancy-based controls should be disabled
-  const isOccupancyLogicDisabled = currentSmartMode === 'light';
-
   return (
     <>
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -181,7 +172,6 @@ export function DeviceDetailPanel({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               
-              {/* Glowing Dot Indicator */}
               <div className="flex items-center justify-center w-12 h-12">
                 <div
                   className={cn(
@@ -193,7 +183,6 @@ export function DeviceDetailPanel({
                 />
               </div>
 
-              {/* Stacked Name and Location Fix */}
               <div className="flex flex-col justify-center gap-1">
                 <SheetTitle className="text-left text-lg font-semibold leading-none">
                   {device.name}
@@ -320,32 +309,21 @@ export function DeviceDetailPanel({
                 </p>
               </div>
 
-              {/* AUTO-OFF SWITCH: Disabled visually if Smart Mode 2 is active */}
-              <div className={cn(
-                "flex items-center justify-between p-3 rounded-lg bg-muted transition-opacity",
-                isOccupancyLogicDisabled && "opacity-40 grayscale-[0.5]"
-              )}>
+              {/* AUTO-OFF SWITCH */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted transition-opacity">
                 <div className="flex flex-col gap-0.5">
-                  <Label className={cn(isOccupancyLogicDisabled && "text-muted-foreground")}>
-                    Auto-Off on Vacancy
-                  </Label>
-                  {isOccupancyLogicDisabled && (
-                    <span className="text-[10px] text-warning font-medium">Disabled in Light-Only mode</span>
-                  )}
+                  <Label>Auto-Off on Vacancy</Label>
                 </div>
                 <Switch
-                  checked={isOccupancyLogicDisabled ? false : automationSettings.occupancyControlEnabled}
+                  checked={automationSettings.occupancyControlEnabled}
                   onCheckedChange={(checked) => onAutomationChange(device.id, { occupancyControlEnabled: checked })}
-                  disabled={isOffline || isOccupancyLogicDisabled}
+                  disabled={isOffline}
                 />
               </div>
 
-              {/* AUTO-OFF DELAY: Disabled visually if Smart Mode 2 is active or Switch is OFF */}
+              {/* AUTO-OFF DELAY */}
               {automationSettings.occupancyControlEnabled && (
-                <div className={cn(
-                  "space-y-3 p-3 rounded-lg border transition-opacity",
-                  isOccupancyLogicDisabled && "opacity-40 pointer-events-none"
-                )}>
+                <div className="space-y-3 p-3 rounded-lg border transition-opacity">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <Label>Auto-Off Delay</Label>
@@ -359,7 +337,6 @@ export function DeviceDetailPanel({
                         value={autoOffHours}
                         onChange={(e) => handleTimeChange(parseInt(e.target.value) || 0, autoOffMinutes, autoOffSeconds)}
                         className="w-16 text-center font-mono"
-                        disabled={isOccupancyLogicDisabled}
                       />
                       <span className="text-sm text-muted-foreground">h</span>
                     </div>
@@ -372,7 +349,6 @@ export function DeviceDetailPanel({
                         value={autoOffMinutes}
                         onChange={(e) => handleTimeChange(autoOffHours, parseInt(e.target.value) || 0, autoOffSeconds)}
                         className="w-16 text-center font-mono"
-                        disabled={isOccupancyLogicDisabled}
                       />
                       <span className="text-sm text-muted-foreground">m</span>
                     </div>
@@ -385,16 +361,13 @@ export function DeviceDetailPanel({
                         value={autoOffSeconds}
                         onChange={(e) => handleTimeChange(autoOffHours, autoOffMinutes, parseInt(e.target.value) || 0)}
                         className="w-16 text-center font-mono"
-                        disabled={isOccupancyLogicDisabled}
                       />
                       <span className="text-sm text-muted-foreground">s</span>
                     </div>
                   </div>
-                  {!isOccupancyLogicDisabled && (
-                    <p className="text-xs text-muted-foreground">
-                      Device turns off after {autoOffHours > 0 ? `${autoOffHours}h ` : ""}{autoOffMinutes > 0 ? `${autoOffMinutes}m ` : ""}{autoOffSeconds}s of vacancy
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Device turns off after {autoOffHours > 0 ? `${autoOffHours}h ` : ""}{autoOffMinutes > 0 ? `${autoOffMinutes}m ` : ""}{autoOffSeconds}s of vacancy
+                  </p>
                 </div>
               )}
             </div>

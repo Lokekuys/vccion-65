@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Settings, ChevronRight, Wifi, WifiOff, AlertTriangle,
-  Pencil, Hand, Calendar, Brain, Zap, SignalZero, Lock
+  Pencil, Hand, Calendar, Brain, Zap, Lock
 } from 'lucide-react';
 
 // UI Components & Hooks
@@ -115,7 +115,8 @@ export function DeviceCard({
   return (
     <Card
       className={cn(
-        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all',
+        'device-card cursor-pointer animate-fade-in relative overflow-hidden transition-all duration-300',
+        !isDeviceOnline && 'opacity-60 saturate-75 shadow-none',
         isUserLockedOut && 'opacity-90'
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -132,16 +133,16 @@ export function DeviceCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-           <div className="flex items-center justify-center w-10 h-10">
-  <div
-    className={cn(
-      'w-2.5 h-2.5 rounded-full transition-all duration-300',
-      effectiveIsOn
-        ? 'bg-green-500 ring-[5px] ring-green-500/20 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
-        : 'bg-red-500 ring-[5px] ring-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
-    )}
-  />
-</div>
+            <div className="flex items-center justify-center w-10 h-10">
+              <div
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full transition-all duration-300',
+                  effectiveIsOn
+                    ? 'bg-green-500 ring-[5px] ring-green-500/20 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
+                    : 'bg-red-500 ring-[5px] ring-red-500/20 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                )}
+              />
+            </div>
 
             <div>
               <div className="flex items-center gap-1">
