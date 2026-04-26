@@ -182,11 +182,16 @@ export function useDevices() {
               controlMode: resolvedControlMode,
               smartMode: (d.smartMode as SmartMode) ?? "occupancy",
 
-              sensorData: {
-                occupancy: sharedSensorRef.current?.occupancy ?? "unknown",
-                lightLevel: sharedSensorRef.current?.lightLevel ?? 0,
-                lastUpdated: new Date(),
-              },
+              sensorData: (() => {
+                const ref = sharedSensorRef.current;
+                const sensorOnline =
+                  !!ref && computeConnectionStatus(ref.lastSeenMs) === "connected";
+                return {
+                  occupancy: sensorOnline ? (ref!.occupancy as any) : "unknown",
+                  lightLevel: sensorOnline ? ref!.lightLevel : 0,
+                  lastUpdated: new Date(),
+                };
+              })(),
 
               powerData: {
                 currentWatts: d.pzemTest?.power ?? d.power ?? d.powerData?.currentWatts ?? 0,
