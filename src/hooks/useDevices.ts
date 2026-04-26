@@ -362,7 +362,11 @@ export function useDevices() {
     devices.forEach((device) => {
       const { id, isOn, sensorData, automationSettings: auto, controlMode, smartMode } = device;
 
-      if (controlMode !== "smart") {
+      // 🛡️ Guard: do not run automation against an offline plug.
+      // Discard sensor-driven decisions until the plug is reachable again.
+      const plugOnline = computeConnectionStatus(device.lastSeen) === "connected";
+
+      if (controlMode !== "smart" || !plugOnline) {
         if (vacancyTimers.current[id]) {
           clearTimeout(vacancyTimers.current[id]);
           delete vacancyTimers.current[id];
