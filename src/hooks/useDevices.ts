@@ -254,10 +254,21 @@ export function useDevices() {
   /* ---------- PUSH SHARED SENSOR DATA INTO DEVICES ---------- */
 
   useEffect(() => {
-    if (!sharedSensorData || !isSensorBoxOnline) return;
-
     setDevices((prev) => {
       if (!prev) return prev;
+
+      // When sensor box is offline → wipe presence/lux from every device so
+      // the UI cannot fall back to stale values.
+      if (!sharedSensorData || !isSensorBoxOnline) {
+        return prev.map((d) => ({
+          ...d,
+          sensorData: {
+            ...d.sensorData,
+            occupancy: "unknown" as any,
+            lightLevel: 0,
+          },
+        }));
+      }
 
       return prev.map((d) => ({
         ...d,
