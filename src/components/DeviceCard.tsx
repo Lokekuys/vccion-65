@@ -49,7 +49,7 @@ export function DeviceCard({
   onToggle,
   onSelect,
   countdownEndsAt,
-  isSensorBoxOnline = true
+  isSensorBoxOnline = false
 }: DeviceCardProps) {
   const { isAdmin } = useAdmin();
 
