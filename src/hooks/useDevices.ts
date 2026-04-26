@@ -182,11 +182,16 @@ export function useDevices() {
               controlMode: resolvedControlMode,
               smartMode: (d.smartMode as SmartMode) ?? "occupancy",
 
-              sensorData: {
-                occupancy: sharedSensorRef.current?.occupancy ?? "unknown",
-                lightLevel: sharedSensorRef.current?.lightLevel ?? 0,
-                lastUpdated: new Date(),
-              },
+              sensorData: (() => {
+                const ref = sharedSensorRef.current;
+                const sensorOnline =
+                  !!ref && computeConnectionStatus(ref.lastSeenMs) === "connected";
+                return {
+                  occupancy: sensorOnline ? (ref!.occupancy as any) : "unknown",
+                  lightLevel: sensorOnline ? ref!.lightLevel : 0,
+                  lastUpdated: new Date(),
+                };
+              })(),
 
               powerData: {
                 currentWatts: d.pzemTest?.power ?? d.power ?? d.powerData?.currentWatts ?? 0,
@@ -249,10 +254,21 @@ export function useDevices() {
   /* ---------- PUSH SHARED SENSOR DATA INTO DEVICES ---------- */
 
   useEffect(() => {
-    if (!sharedSensorData || !isSensorBoxOnline) return;
-
     setDevices((prev) => {
       if (!prev) return prev;
+
+      // When sensor box is offline → wipe presence/lux from every device so
+      // the UI cannot fall back to stale values.
+      if (!sharedSensorData || !isSensorBoxOnline) {
+        return prev.map((d) => ({
+          ...d,
+          sensorData: {
+            ...d.sensorData,
+            occupancy: "unknown" as any,
+            lightLevel: 0,
+          },
+        }));
+      }
 
       return prev.map((d) => ({
         ...d,
@@ -357,7 +373,11 @@ export function useDevices() {
     devices.forEach((device) => {
       const { id, isOn, sensorData, automationSettings: auto, controlMode, smartMode } = device;
 
-      if (controlMode !== "smart") {
+      // 🛡️ Guard: do not run automation against an offline plug.
+      // Discard sensor-driven decisions until the plug is reachable again.
+      const plugOnline = computeConnectionStatus(device.lastSeen) === "connected";
+
+      if (controlMode !== "smart" || !plugOnline) {
         if (vacancyTimers.current[id]) {
           clearTimeout(vacancyTimers.current[id]);
           delete vacancyTimers.current[id];
